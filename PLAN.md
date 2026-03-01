@@ -58,8 +58,8 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
 | :--- | :--- | :--- |
 | `qai todo add "内容"` | 具体的な Todo を直接追加 | (新規) -> `todo` |
 | `qai todo list` | 今日やるべき Todo の一覧 | `todo` / `doing` の抽出 |
-| `qai todo work [ID]` | Todo 着手（作業中へ） | `todo` -> `doing`, `started_at` 更新 |
-| `qai todo done [ID]` | Todo 完了 | `doing` -> `done`, `duration` 自動計算して `Logs` 登録 |
+| `qai todo work [ID]` | Todo 着手 & タイマー開始 | `todo` -> `doing`, `started_at` 更新。TUI でタイマーを表示。 |
+| `qai todo done [ID]` | Todo 完了 | `doing` -> `done`, タイマー終了。`duration` 自動計算して `Logs` 登録 |
 
 ### 実績・ログ
 | コマンド | 説明 | 備考 |
@@ -73,8 +73,8 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
 * **ワークフロー**:
     1. `qai idea add "家を綺麗にする"` (将来やりたいこと)
     2. `qai todo add "掃除機をかける"` (今日やること)
-    3. `qai todo work [ID]` -> 集中開始。
-    4. `qai todo done` -> 完了。
+    3. `qai todo work [ID]` -> 集中開始。TUI タイマーが起動。
+    4. `qai todo done` -> 完了。ログが自動保存される。
 
 ## 6. 設定ファイル (`~/.qairc`) 案
 ```toml
@@ -114,4 +114,20 @@ log_dir = "~/workspace/hobby/logs"
 
 ## [メモ]
 ```
+
+## 8. ポモドーロタイマー (TUI) 仕様
+`qai todo work [ID]` 実行時に表示される TUI 画面の動作とインターフェース案。
+
+### インターフェース案
+```text
+Working on: [ID] 掃除機をかける
+[██████████░░░░░░░░░] 15:20 / 25:00
+(q) quit | (d) done | (p) pause
+```
+
+### 振る舞い
+* **自動記録**: タイマーが 1 セッション（デフォルト 25 分）経過するごとに、`Logs` テーブルへ「25分集中」の実績を自動で追加する。
+* **中断制御**: `q` でタイマーを中断。その際、それまでの経過時間を `Logs` に保存するかどうかを選択可能。
+* **状態連携**: タイマー画面で `d` を押すと、その場で `qai todo done` 相当の処理（ステータスを `done` に変更、経過時間を `Logs` へ保存）を行い TUI を終了する。
+* **通知機能**: セッション終了時にシステムのデスクトップ通知、またはターミナルのベル音で通知を行う。
 
