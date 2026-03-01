@@ -21,7 +21,7 @@
 | :--- | :--- | :--- |
 | `id` | INT | 一意識別子 (CLI 操作用) |
 | `title` | TEXT | 内容 |
-| `status` | STRING | want (Idea) / todo (Task) / doing / done / archived |
+| `status` | STRING | idea / todo (Task) / doing / done / archived |
 | `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0) |
 | `parent_id`| INT | 親タスクの ID (アイデアを分解した場合の紐付け用) |
 | `created_at`| DATETIME | 作成日時 |
@@ -45,12 +45,12 @@
 | `qai init` | コンテキストの設定 | `~/.qairc` の作成・更新 |
 | `qai start` | 1日の開始（プランニング） | 今日の Markdown を生成 |
 
-### アイデア管理 (Wants)
+### アイデア管理 (Ideas)
 | コマンド | 説明 | DB 状態遷移 |
 | :--- | :--- | :--- |
-| `qai idea add "内容"` | 漠然としたアイデアの追加 | (新規) -> `want` |
-| `qai idea list` | アイデア一覧の表示 | `want` の抽出 |
-| `qai idea refine [ID]` | LLM によるタスク分解 | `want` -> `todo` (複数可) |
+| `qai idea add "内容"` | 漠然としたアイデアの追加 | (新規) -> `idea` |
+| `qai idea list` | アイデア一覧の表示 | `idea` の抽出 |
+| `qai idea refine [ID]` | LLM によるタスク分解 | `idea` -> `todo` (複数可) |
 
 ### タスク管理 (TODO/Pomodoro)
 | コマンド | 説明 | DB 状態遷移 |
@@ -67,8 +67,8 @@
 | `qai report` | 振り返りレポート | 全実績の集計 |
 
 ## 5. 運用ルール
-* **Wants と TODO の分離**:
-    - **やりたいこと (Wants)**: 漠然とした願いやバックログ。`qai idea add` でここに入る。
+* **Ideas と TODO の分離**:
+    - **アイデア (Ideas)**: 漠然とした願いやバックログ。`qai idea add` でここに入る。
     - **TODO**: 今日取り組む具体的なタスク。`qai idea refine` や `qai task add` を経てここに入る。
 * **ワークフロー**:
     1. `qai idea add "家を綺麗にする"`
@@ -80,7 +80,7 @@
 ```markdown
 # 2026-03-01 (Sun)
 
-## [やりたいこと (Wants)]
+## [アイデア (Ideas)]
 - [ ] 1: 新機能のアイデアを練る
 - [ ] 2: 旅行の計画を立てる
 
