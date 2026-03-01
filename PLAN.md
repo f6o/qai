@@ -24,6 +24,7 @@
 | `status` | STRING | idea / todo / doing / done |
 | `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0) |
 | `parent_id`| INT | 親 ID (アイデアを分解した場合の紐付け用) |
+| `started_at`| DATETIME | 作業開始日時 (最後に `work` を叩いた時刻) |
 | `created_at`| DATETIME | 作成日時 |
 
 ### Logs (実績記録)
@@ -53,12 +54,12 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
 | `qai idea list` | アイデア一覧の表示 | `idea` の抽出 |
 
 ### Todo 管理
-| コマンド | 説明 | DB 状態遷移 |
+| コマンド | 説明 | DB 状態遷移 / 実績記録 |
 | :--- | :--- | :--- |
 | `qai todo add "内容"` | 具体的な Todo を直接追加 | (新規) -> `todo` |
 | `qai todo list` | 今日やるべき Todo の一覧 | `todo` / `doing` の抽出 |
-| `qai todo work [ID]` | Todo 着手（作業中へ） | `todo` -> `doing` |
-| `qai todo done [ID]` | Todo 完了 | `doing` -> `done` |
+| `qai todo work [ID]` | Todo 着手（作業中へ） | `todo` -> `doing`, `started_at` 更新 |
+| `qai todo done [ID]` | Todo 完了 | `doing` -> `done`, `duration` 自動計算して `Logs` 登録 |
 
 ### 実績・ログ
 | コマンド | 説明 | 備考 |
