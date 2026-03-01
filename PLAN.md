@@ -52,18 +52,17 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
 | `qai idea add "内容"` | 漠然としたアイデアの追加 | (新規) -> `idea` |
 | `qai idea list` | アイデア一覧の表示 | `idea` の抽出 |
 
-### Todo 管理 (Pomodoro)
+### Todo 管理
 | コマンド | 説明 | DB 状態遷移 |
 | :--- | :--- | :--- |
 | `qai todo add "内容"` | 具体的な Todo を直接追加 | (新規) -> `todo` |
 | `qai todo list` | 今日やるべき Todo の一覧 | `todo` / `doing` の抽出 |
-| `qai todo work [ID]` | Todo 着手（ポモドーロ開始） | `todo` -> `doing` |
+| `qai todo work [ID]` | Todo 着手（作業中へ） | `todo` -> `doing` |
 | `qai todo done [ID]` | Todo 完了 | `doing` -> `done` |
 
 ### 実績・ログ
 | コマンド | 説明 | 備考 |
 | :--- | :--- | :--- |
-| `qai pomo [分] "内容"` | 汎用的な集中ログ | Todo 外の記録用 |
 | `qai report` | 振り返りレポート | 全実績の集計 |
 
 ## 5. 運用ルール
