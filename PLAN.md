@@ -14,60 +14,74 @@
 
 ## 3. データモデル (SQLite)
 
-### Tasks (タスク管理)
+### Tasks (Ideas / TODO 管理)
+ひとつのテーブルで「漠然としたアイデア」から「具体的なタスク」までを管理する。
+
 | カラム | 型 | 説明 |
 | :--- | :--- | :--- |
 | `id` | INT | 一意識別子 (CLI 操作用) |
-| `title` | TEXT | タスク名 |
-| `status` | STRING | todo / doing / done / archived |
+| `title` | TEXT | 内容 |
+| `status` | STRING | want (Idea) / todo (Task) / doing / done / archived |
 | `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0) |
+| `parent_id`| INT | 親タスクの ID (アイデアを分解した場合の紐付け用) |
 | `created_at`| DATETIME | 作成日時 |
 
-
 ### Logs (実績記録)
-| カラム | 型 | 説明 |
+
+## 4. コマンド体系 (Structured Subcommands)
+
+### 共通 / 設定
+| コマンド | 説明 | DB / 設定 |
 | :--- | :--- | :--- |
-| `id` | INT | 一意識別子 |
-| `task_id` | INT | 関連するタスクの ID (任意) |
-| `content` | TEXT | 内容（ポモドーロや done ログ） |
-| `duration` | INT | 作業時間 (分) |
-| `logged_at` | DATETIME | 記録日時 |
+| `qai init` | コンテキストの設定 | `~/.qairc` の作成・更新 |
+| `qai start` | 1日の開始（プランニング） | 今日の Markdown を生成 |
 
-## 4. コマンド体系 (Pomodoro-Centric)
+### アイデア管理 (Wants)
+| コマンド | 説明 | DB 状態遷移 |
+| :--- | :--- | :--- |
+| `qai idea add "内容"` | 漠然としたアイデアの追加 | (新規) -> `want` |
+| `qai idea list` | アイデア一覧の表示 | `want` の抽出 |
+| `qai idea refine [ID]` | LLM によるタスク分解 | `want` -> `todo` (複数可) |
 
-| コマンド | 説明 | DB 操作 | Markdown 反映 |
-| :--- | :--- | :--- | :--- |
-| `qai init` | コンテキストの対話的設定 | `~/.qairc` に新しい DB/ログパスを追加 | (なし) |
-| `qai start` | 1日の開始（プランニング） | 未完了タスクを抽出 | 今日の `.md` を作成しタスクを列挙 |
-| `qai want "内容"` | アイデア・タスクの追加 | `Tasks` に `todo` で登録 | 今日のファイルの `[やりたいこと]` に追記 |
-| `qai work [ID]` | タスクの着手（ポモドーロ開始） | ステータスを `doing` に変更 | (任意) ステータス更新 |
-| `qai done [ID]` | タスク完了 | ステータスを `done` に | `[やったこと]` に完了時刻と共に移動 |
-| `qai pomo [分]` | 汎用的な集中ログ | `Logs` に実績を記録 | `[やったこと]` にポモログを追記 |
-| `qai refine` | LLM によるタスク分解 | 既存タスクを詳細化・更新 | 今日のファイルの `[やりたいこと]` を更新 |
-| `qai list` | タスク一覧表示 | 未完了タスクをクエリ | (なし) |
-| `qai report` | 振り返りレポート | 全実績を解析・集計出力 | (なし) |
+### タスク管理 (TODO/Pomodoro)
+| コマンド | 説明 | DB 状態遷移 |
+| :--- | :--- | :--- |
+| `qai task add "内容"` | 具体的なタスクを直接追加 | (新規) -> `todo` |
+| `qai task list` | 今日やるべきタスクの一覧 | `todo` / `doing` の抽出 |
+| `qai task work [ID]` | タスク着手（ポモドーロ開始） | `todo` -> `doing` |
+| `qai task done [ID]` | タスク完了 | `doing` -> `done` |
+
+### 実績・ログ
+| コマンド | 説明 | 備考 |
+| :--- | :--- | :--- |
+| `qai pomo [分] "内容"` | 汎用的な集中ログ | タスク外の記録用 |
+| `qai report` | 振り返りレポート | 全実績の集計 |
 
 ## 5. 運用ルール
-* **qai init の動作**: 
-    - 実行時のディレクトリを `root` とし、DB名とログ保存先をユーザーに問い合せて `~/.qairc` を作成・更新する。
-* **ポモドーロの流れ**:
-    1. `qai start` で今日やることを確認。
-    2. `qai work 1` でタスク1に集中開始。
-    3. 完了したら `qai done` (ID省略時は `doing` のものを完了) でログを自動生成。
-    4. 予定外の作業は `qai pomo "会議など"` でクイックに記録。
+* **Wants と TODO の分離**:
+    - **やりたいこと (Wants)**: 漠然とした願いやバックログ。`qai idea add` でここに入る。
+    - **TODO**: 今日取り組む具体的なタスク。`qai idea refine` や `qai task add` を経てここに入る。
+* **ワークフロー**:
+    1. `qai idea add "家を綺麗にする"`
+    2. `qai idea refine [ID]` -> `task` (todo) が生成される。
+    3. `qai task work [ID]` -> 集中開始。
+    4. `qai task done` -> 完了。
 
 ## 6. Markdown テンプレート案
 ```markdown
 # 2026-03-01 (Sun)
 
-## [やりたいこと]
-- [ ] 1: 仕様を固める (A)
-- [ ] 2: DB設計を行う (B)
+## [やりたいこと (Wants)]
+- [ ] 1: 新機能のアイデアを練る
+- [ ] 2: 旅行の計画を立てる
+
+## [TODO]
+- [ ] 3: 掃除機をかける (10)
+- [/] 4: ゴミを出す (10) [doing]
 
 ## [やったこと]
-- [x] 1: 仕様を固める (20:15)
-- [pomo] プロトタイプ作成 (25min) (21:00)
+- [x] 5: 昨日の日報を書く (09:15)
 
 ## [メモ]
-(ここはユーザーが自由に編集可能。qai はこのセクションを壊さない)
 ```
+
