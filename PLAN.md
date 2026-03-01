@@ -22,7 +22,7 @@
 | `title` | TEXT | 内容 |
 | `status` | STRING | idea / todo / doing / done |
 | `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0)。TUIおよびMarkdownで優先度降順で表示・出力される。 |
-| `parent_id`| INT | 親 ID (アイデアを分解した場合の紐付け用) |
+| `parent_id`| INT | 親 ID。`qai todo add --parent` で手動指定、または将来の LLM 分解機能で自動設定。 |
 | `started_at`| DATETIME | 作業開始日時 (最後に `pomo` でタスク選択した時刻) |
 | `created_at`| DATETIME | 作成日時 |
 
@@ -55,7 +55,7 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
 ### Todo 管理
 | コマンド | 説明 | DB 状態遷移 / 実績記録 |
 | :--- | :--- | :--- |
-| `qai todo add "内容"` | 具体的な Todo を直接追加 | (新規) -> `todo` |
+| `qai todo add "内容" [--parent ID]` | 具体的な Todo を直接追加。`--parent` で親 Idea を指定可能。 | (新規) -> `todo` |
 | `qai todo list` | 今日やるべき Todo の一覧 | `todo` / `doing` の抽出 |
 
 ### 集中・ポモドーロ
