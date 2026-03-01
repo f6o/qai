@@ -1,7 +1,7 @@
 # 次世代タスク管理ツール qai 仕様設計書 (改訂版)
 
 ## 1. コンセプト
-* **DB-Centric Hybrid Storage**: 状態管理の正解（SSOT）は SQLite (`qai.db`)。Markdown (`YYYY-MM-DD.md`) はその日の「タスク一覧のビュー」兼「活動ログ」として扱う。**DB 上の状態変更（qai pomo による着手や完了など）は、即座に Markdown ファイルへ反映（同期）される。**
+* **DB-Centric Hybrid Storage**: 状態管理の正解（SSOT）は SQLite (`work.db` 等)。Markdown (`YYYY-MM-DD.md`) はその日の「タスク一覧のビュー」兼「活動ログ」として扱う。**DB 上の状態変更（qai pomo による着手や完了など）は、即座に Markdown ファイルへ反映（同期）される。**
 * **LLM-Driven Refinement**: 曖昧なアイデアを LLM が分解し、DB へ直接タスク登録する。
 * **Explicit Continuity**: 毎朝 `qai start` を実行することで、DB 内の未完了タスクを今日の日付ファイルへ一括展開する。
 
@@ -24,7 +24,7 @@
 | `status` | STRING | idea / todo / doing / done |
 | `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0) |
 | `parent_id`| INT | 親 ID (アイデアを分解した場合の紐付け用) |
-| `started_at`| DATETIME | 作業開始日時 (最後に `work` を叩いた時刻) |
+| `started_at`| DATETIME | 作業開始日時 (最後に `pomo` でタスク選択した時刻) |
 | `created_at`| DATETIME | 作成日時 |
 
 ### Logs (実績記録)
