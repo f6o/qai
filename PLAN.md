@@ -20,8 +20,9 @@
 | `id` | INT | 一意識別子 (CLI 操作用) |
 | `title` | TEXT | タスク名 |
 | `status` | STRING | todo / doing / done / archived |
-| `priority` | STRING | A (High) / B (Normal) / C (Low) |
+| `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0) |
 | `created_at`| DATETIME | 作成日時 |
+
 
 ### Logs (実績記録)
 | カラム | 型 | 説明 |
@@ -46,7 +47,19 @@
 
 ## 5. 運用ルール
 * **Markdown 手動編集の扱い**: ユーザーが Markdown を直接編集（メモ追記など）することは自由だが、その内容は **DB には同期されない**。タスクの完了や追加は必ず `qai` コマンドを通じて行う。
-* **コンテキスト判定**: 実行時のカレントディレクトリが設定済みのパス配下であれば、対応する SQLite ファイルとログ保存先ディレクトリを選択する。
+* **コンテキスト判定 (Multi-Context)**: 実行時のカレントディレクトリ (CWD) に応じて、対応する SQLite ファイルとログ保存先ディレクトリを選択する。設定ファイル (`~/.qairc`) でマッピングを定義する。
+    * 例:
+      ```yaml
+      contexts:
+        - name: "work"
+          root: "/Users/yappy/projects/work"
+          db_path: "~/.qai/work.db"
+          log_dir: "/Users/yappy/projects/work/logs"
+        - name: "hobby"
+          root: "/" # デフォルト（フォールバック）
+          db_path: "~/.qai/hobby.db"
+          log_dir: "~/documents/qai_logs"
+      ```
 * **ID の再利用**: `qai list` 等で表示される ID は、CLI での打ちやすさを考慮した短い数値とする。
 
 ## 6. Markdown テンプレート案
