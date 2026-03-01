@@ -22,7 +22,7 @@
 | `id` | INT | 一意識別子 (CLI 操作用) |
 | `title` | TEXT | 内容 |
 | `status` | STRING | idea / todo / doing / done |
-| `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0) |
+| `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0)。TUIおよびMarkdownで優先度降順で表示・出力される。 |
 | `parent_id`| INT | 親 ID (アイデアを分解した場合の紐付け用) |
 | `started_at`| DATETIME | 作業開始日時 (最後に `pomo` でタスク選択した時刻) |
 | `created_at`| DATETIME | 作成日時 |
@@ -123,7 +123,7 @@ log_dir = "~/workspace/hobby/logs"
 `qai pomo` 実行時に表示される TUI 画面の動作とインターフェース。
 
 ### ステップ 1: タスク選択
-起動後、`todo` / `doing` ステータスのタスク一覧を表示。
+起動後、`todo` / `doing` ステータスのタスク一覧を優先度降順で表示。
 ```text
 ? Select a task to focus on:
 > [ ] 3: 掃除機をかける
