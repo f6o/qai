@@ -22,7 +22,7 @@
 | `title` | TEXT | 内容 |
 | `status` | STRING | idea / todo / doing / done |
 | `priority` | INT | 優先度 (正数: 大きいほど高優先。DEFAULT 10, CHECK > 0)。TUIおよびMarkdownで優先度降順で表示・出力される。 |
-| `parent_id`| INT | 親 ID。`qai todo add --parent` で手動指定、または将来の LLM 分解機能で自動設定。 |
+| `parent_id`| INT | 親 Idea の ID。`qai todo add --parent` で指定（親は常に `idea` ステータス）。 |
 | `started_at`| DATETIME | 作業開始日時 (最後に `pomo` でタスク選択した時刻) |
 | `created_at`| DATETIME | 作成日時 |
 
