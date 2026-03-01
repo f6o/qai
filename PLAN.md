@@ -27,6 +27,15 @@
 | `created_at`| DATETIME | 作成日時 |
 
 ### Logs (実績記録)
+タスクごとの作業ログや、汎用的な集中記録を保持する。
+
+| カラム | 型 | 説明 |
+| :--- | :--- | :--- |
+| `id` | INT | 一意識別子 |
+| `task_id` | INT | 関連タスクの ID (任意) |
+| `content` | TEXT | ログ内容 |
+| `duration` | INT | 作業時間 (分) |
+| `logged_at`| DATETIME | 記録日時 |
 
 ## 4. コマンド体系 (Structured Subcommands)
 
