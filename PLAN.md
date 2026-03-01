@@ -43,7 +43,7 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
 ### 共通 / ユーティリティ
 | コマンド | 説明 | DB / 設定 |
 | :--- | :--- | :--- |
-| `qai init` | コンテキストの設定 | `~/.qairc` の作成・更新 |
+| `qai init` | コンテキストの設定 | `~/.qairc` 作成・ポモドーロ設定 (25/5分) |
 | `qai start` | 1日の開始（プランニング） | 今日の Markdown を生成 |
 | `qai show [ID]` | 指定した Todo/Idea の詳細表示 | 全カラム情報の出力 |
 
@@ -76,7 +76,28 @@ Todo ごとの作業ログや、汎用的な集中記録を保持する。
     3. `qai todo work [ID]` -> 集中開始。
     4. `qai todo done` -> 完了。
 
-## 6. Markdown テンプレート案
+## 6. 設定ファイル (`~/.qairc`) 案
+```toml
+# ポモドーロ基本設定
+[pomodoro]
+work_minutes = 25
+break_minutes = 5
+
+# コンテキスト設定 (ディレクトリと DB/Log の紐付け)
+[[contexts]]
+name = "work"
+path = "~/workspace/work"
+db_path = "~/qai/work.db"
+log_dir = "~/workspace/work/logs"
+
+[[contexts]]
+name = "hobby"
+path = "~/workspace/hobby"
+db_path = "~/qai/hobby.db"
+log_dir = "~/workspace/hobby/logs"
+```
+
+## 7. Markdown テンプレート案
 ```markdown
 # 2026-03-01 (Sun)
 
