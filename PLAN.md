@@ -10,7 +10,6 @@
 * **DB**: SQLite (Multi-Context Architecture)
     * 実行時のディレクトリ (CWD) に基づき、使用する DB ファイル (`work.db` / `hobby.db` 等) を自動的に切り替える。
 * **UI**: CLI + TUI (Bubble Tea)
-* **外部連携**: Gemini API / OpenAI API
 
 ## 3. データモデル (SQLite)
 
