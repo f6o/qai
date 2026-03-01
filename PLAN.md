@@ -7,7 +7,8 @@
 
 ## 2. システム構成
 * **言語**: Go
-* **DB**: SQLite (Single Source of Truth)
+* **DB**: SQLite (Multi-Context Architecture)
+    * 実行時のディレクトリ (CWD) に基づき、使用する DB ファイル (`work.db` / `hobby.db` 等) を自動的に切り替える。
 * **UI**: CLI + TUI (Bubble Tea)
 * **外部連携**: Gemini API / OpenAI API
 
@@ -20,7 +21,6 @@
 | `title` | TEXT | タスク名 |
 | `status` | STRING | todo / doing / done / archived |
 | `priority` | STRING | A (High) / B (Normal) / C (Low) |
-| `category` | STRING | work / hobby (ディレクトリ判定) |
 | `created_at`| DATETIME | 作成日時 |
 
 ### Logs (実績記録)
@@ -36,8 +36,8 @@
 
 | コマンド | DB 操作 | Markdown 反映 |
 | :--- | :--- | :--- |
-| `qai start` | 未完了タスクを抽出 | `YYYY-MM-DD.md` を生成。タスクを `[やりたいこと]` に列挙。 |
-| `qai want "内容"` | タスクを新規登録 | 今日のファイルの `[やりたいこと]` に追記。 |
+| `qai start` | コンテキストに応じた未完了タスクを抽出 | `YYYY-MM-DD.md` を生成。タスクを `[やりたいこと]` に列挙。 |
+| `qai want "内容"` | コンテキストに応じた DB に登録 | 今日のファイルの `[やりたいこと]` に追記。 |
 | `qai refine` | 既存タスクを分解・更新 | 分解後のタスクを `[やりたいこと]` に反映。 |
 | `qai done [ID]` | ステータスを `done` に | `[やったこと]` に完了時刻と共に追記。 |
 | `qai pomo "内容"` | `Logs` に実績を記録 | `[やったこと]` に時間・時刻と共に追記。 |
@@ -46,7 +46,7 @@
 
 ## 5. 運用ルール
 * **Markdown 手動編集の扱い**: ユーザーが Markdown を直接編集（メモ追記など）することは自由だが、その内容は **DB には同期されない**。タスクの完了や追加は必ず `qai` コマンドを通じて行う。
-* **カテゴリ判定**: 実行時のカレントディレクトリが設定済みの `work_dir` 配下であれば自動的に `work` カテゴリとする。
+* **コンテキスト判定**: 実行時のカレントディレクトリが設定済みのパス配下であれば、対応する SQLite ファイルとログ保存先ディレクトリを選択する。
 * **ID の再利用**: `qai list` 等で表示される ID は、CLI での打ちやすさを考慮した短い数値とする。
 
 ## 6. Markdown テンプレート案
