@@ -19,6 +19,12 @@
 タスクとアイデアを統合管理。人間が読み書きしやすい YAML 形式。
 ID はファイル内の最大 ID + 1 で自動採番する (削除済みIDの再利用はしない)。
 
+**ステータス値**:
+- `idea`: アイデア (未分解)
+- `todo`: 具体的なタスク (未着手)
+- `doing`: 集中中
+- `done`: 完了
+
 ```yaml
 - id: 1
   title: "次世代タスク管理ツールの設計"
@@ -98,6 +104,7 @@ break_minutes = 5
 [data]
 todofile = "~/.config/qai/tasks.yaml"
 logfile = "~/.config/qai/logs.jsonl"
+markdowndir = "~/.config/qai/markdown"
 ```
 
 ## 7. Markdown テンプレート案
