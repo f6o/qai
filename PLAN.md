@@ -7,15 +7,15 @@
 
 ## 2. システム構成
 * **言語**: Go
-* **Storage**: File-based (Multi-Context Architecture)
-    * 実行時のディレクトリ (CWD) に基づき、使用するデータディレクトリ (`.qai/` 等) を自動的に切り替える。
+* **Storage**: File-based
+    * タスクとログは固定の `~/.config/qai` ディレクトリに保存。
     * **Tasks (YAML)**: 頻繁に更新・参照されるタスク状態の管理。
     * **Logs (JSONL)**: 追記のみの実績・作業記録。
 * **UI**: CLI + TUI (Bubble Tea)
 
 ## 3. データモデル (Hybrid File Storage)
 
-### Tasks (`tasks.yml`)
+### Tasks (`tasks.yaml`)
 タスクとアイデアを統合管理。人間が読み書きしやすい YAML 形式。
 ID はファイル内の最大 ID + 1 で自動採番する。
 
@@ -86,25 +86,17 @@ ID はファイル内の最大 ID + 1 で自動採番する。
     4. タイマー終了、または `d` キーでタスク完了。ログが自動保存される。
 
 
-## 6. 設定ファイル (`~/.qairc`) 案
+## 6. 設定ファイル (`~/.config/qai/config.toml`) 案
 ```toml
 # ポモドーロ基本設定
 [pomodoro]
 work_minutes = 25
 break_minutes = 5
 
-# コンテキスト設定 (ディレクトリとデータ/Log の紐付け)
-[[contexts]]
-name = "work"
-path = "~/workspace/work"
-data_dir = "~/qai/work" # tasks.yml と logs.jsonl が置かれる
-log_dir = "~/workspace/work/logs"
-
-[[contexts]]
-name = "hobby"
-path = "~/workspace/hobby"
-data_dir = "~/qai/hobby"
-log_dir = "~/workspace/hobby/logs"
+# データ保存先
+[data]
+todofile = "~/.config/qai/tasks.yaml"
+logfile = "~/.config/qai/logs.jsonl"
 ```
 
 ## 7. Markdown テンプレート案
