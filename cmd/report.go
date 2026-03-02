@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -69,7 +68,7 @@ var reportCmd = &cobra.Command{
 			cmd.Println()
 			cmd.Println("Today's logs:")
 			for _, l := range todayLogs {
-				fmt.Printf("  - [%s] Task #%d: %s (%d min)\n", l.LoggedAt.Format("15:04"), l.TodoID, l.Content, l.Duration)
+				cmd.Printf("  - [%s] Task #%d: %s (%d min)\n", l.LoggedAt.Format("15:04"), l.TodoID, l.Content, l.Duration)
 			}
 		}
 

@@ -35,7 +35,7 @@ var previewCmd = &cobra.Command{
 			}
 
 			if task.Status == model.StatusIdea || task.ParentID != nil {
-				cmd.Println("##", task.Title, "\n")
+				cmd.Printf("## %s\n\n", task.Title)
 				children := ctx.TaskStore.FilterByParentID(tasks, id)
 				for _, child := range children {
 					checkbox := "[ ]"
@@ -45,10 +45,10 @@ var previewCmd = &cobra.Command{
 					case model.StatusDoing:
 						checkbox = "[/]"
 					}
-					fmt.Printf("- %s %s\n", checkbox, child.Title)
+					cmd.Printf("- %s %s\n", checkbox, child.Title)
 				}
 			} else {
-				cmd.Println("Title:", task.Title)
+				cmd.Printf("Title: %s\n", task.Title)
 			}
 			return nil
 		}
@@ -58,7 +58,7 @@ var previewCmd = &cobra.Command{
 			return err
 		}
 
-		cmd.Println(content)
+		cmd.Print(content)
 		return nil
 	},
 }
