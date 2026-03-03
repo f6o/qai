@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/f6o/qai/internal/model"
@@ -41,7 +42,7 @@ func (s *LogStorage) Load() ([]model.Log, error) {
 }
 
 func (s *LogStorage) Append(log model.Log) error {
-	dir := s.filepath[:len(s.filepath)-len("/logs.jsonl")]
+	dir := filepath.Dir(s.filepath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
