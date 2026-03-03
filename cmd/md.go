@@ -10,9 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var previewCmd = &cobra.Command{
-	Use:   "preview",
-	Short: i18n.T("cmd.preview.short"),
+var saveFlag bool
+
+var mdCmd = &cobra.Command{
+	Use:   "md",
+	Short: i18n.T("cmd.md.short"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := NewAppContext()
 		if err != nil {
@@ -31,7 +33,7 @@ var previewCmd = &cobra.Command{
 			fmt.Sscanf(args[0], "%d", &id)
 			task := ctx.TaskStore.FindByID(tasks, id)
 			if task == nil {
-				cmd.Println(i18n.T("cmd.preview.not_found", id))
+				cmd.Println(i18n.T("cmd.md.not_found", id))
 				return nil
 			}
 
@@ -54,6 +56,15 @@ var previewCmd = &cobra.Command{
 			return nil
 		}
 
+		if saveFlag {
+			filename, err := gen.Save(tasks, time.Now())
+			if err != nil {
+				return err
+			}
+			cmd.Println(i18n.T("cmd.md.success", filename))
+			return nil
+		}
+
 		content, err := gen.Generate(tasks, time.Now())
 		if err != nil {
 			return err
@@ -65,5 +76,6 @@ var previewCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(previewCmd)
+	mdCmd.Flags().BoolVarP(&saveFlag, "save", "s", false, i18n.T("cmd.md.save_flag"))
+	rootCmd.AddCommand(mdCmd)
 }
