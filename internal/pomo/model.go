@@ -133,7 +133,7 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.saveMarkdown()
 			return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
 		}
-	case "q", "ctrl+c":
+	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
 	return m, nil
@@ -162,7 +162,7 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CompletedSessions++
 		m.saveLog(m.FocusedTask.ID, "Session skipped", 0)
 		m.CurrentState = StateBreakChoice
-	case "q":
+	case "q", "ctrl+c", "esc":
 		m.CurrentState = StateBreakChoice
 	}
 	return m, nil
@@ -181,7 +181,7 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CurrentState = StateSelectTask
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
-	case "q":
+	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
 	return m, nil
@@ -191,7 +191,7 @@ func (m *Model) handleBreak(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "s":
 		m.CurrentState = StateBreakDone
-	case "q":
+	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
 	return m, nil
@@ -210,7 +210,7 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CurrentState = StateSelectTask
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
-	case "q":
+	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
 	return m, nil
@@ -292,9 +292,9 @@ func (m *Model) viewSelectTask() string {
 		prefix := "  "
 		if i == m.SelectedIdx {
 			prefix = "> "
-			s += selectedStyle.Render(fmt.Sprintf("%s[%d] %s", prefix, t.ID, t.Title)) + "\n"
+			s += selectedStyle.Render(fmt.Sprintf("%s[%d] [%s] %s", prefix, t.ID, t.Status, t.Title)) + "\n"
 		} else {
-			s += fmt.Sprintf("%s[ ] %s\n", prefix, t.Title)
+			s += fmt.Sprintf("%s[%d] [%s] %s\n", prefix, t.ID, t.Status, t.Title)
 		}
 	}
 
