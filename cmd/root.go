@@ -3,12 +3,13 @@ package cmd
 import (
 	"os"
 
+	"github.com/f6o/qai/i18n"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "qai",
-	Short: "qai - next generation task management tool",
+	Short: i18n.T("cmd.root.short"),
 }
 
 func init() {

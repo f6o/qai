@@ -3,13 +3,14 @@ package cmd
 import (
 	"time"
 
+	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/model"
 	"github.com/spf13/cobra"
 )
 
 var ideaAddCmd = &cobra.Command{
 	Use:   "add [content]",
-	Short: "Add a new idea",
+	Short: i18n.T("cmd.idea_add.short"),
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := NewAppContext()
@@ -36,7 +37,7 @@ var ideaAddCmd = &cobra.Command{
 		}
 
 		task = tasks[len(tasks)-1]
-		cmd.Println("Added idea:", task.Title, "(ID:", task.ID, ")")
+		cmd.Println(i18n.T("cmd.idea_add.success", task.Title, task.ID))
 		return nil
 	},
 }

@@ -3,13 +3,14 @@ package cmd
 import (
 	"time"
 
+	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/markdown"
 	"github.com/spf13/cobra"
 )
 
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Start the day and generate today's markdown",
+	Short: i18n.T("cmd.start.short"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := NewAppContext()
 		if err != nil {
@@ -27,7 +28,7 @@ var startCmd = &cobra.Command{
 			return err
 		}
 
-		cmd.Println("Generated:", filename)
+		cmd.Println(i18n.T("cmd.start.success", filename))
 		return nil
 	},
 }

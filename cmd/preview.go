@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/markdown"
 	"github.com/f6o/qai/internal/model"
 	"github.com/spf13/cobra"
@@ -11,7 +12,7 @@ import (
 
 var previewCmd = &cobra.Command{
 	Use:   "preview",
-	Short: "Show today's markdown preview",
+	Short: i18n.T("cmd.preview.short"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := NewAppContext()
 		if err != nil {
@@ -30,7 +31,7 @@ var previewCmd = &cobra.Command{
 			fmt.Sscanf(args[0], "%d", &id)
 			task := ctx.TaskStore.FindByID(tasks, id)
 			if task == nil {
-				cmd.Println("Task not found:", id)
+				cmd.Println(i18n.T("cmd.preview.not_found", id))
 				return nil
 			}
 

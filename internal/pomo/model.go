@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/config"
 	"github.com/f6o/qai/internal/markdown"
 	"github.com/f6o/qai/internal/model"
@@ -284,7 +285,7 @@ func (m *Model) View() string {
 
 func (m *Model) viewSelectTask() string {
 	var s string
-	s += titleStyle.Render("Select a task to focus on:") + "\n\n"
+	s += titleStyle.Render(i18n.T("pomo.select_task")) + "\n\n"
 
 	todos := m.TaskStore.FilterTodos(m.Tasks)
 	for i, t := range todos {
@@ -297,13 +298,13 @@ func (m *Model) viewSelectTask() string {
 		}
 	}
 
-	s += "\n" + subtleStyle.Render("(up/down: select, enter: start, q: quit)")
+	s += "\n" + subtleStyle.Render(i18n.T("pomo.select_task_hint"))
 	return s
 }
 
 func (m *Model) viewFocus() string {
 	var s string
-	s += titleStyle.Render(fmt.Sprintf("Focusing on: [%d] %s", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
+	s += titleStyle.Render(i18n.T("pomo.focusing_on", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
 
 	elapsed := time.Since(m.StartTime)
 	totalDuration := time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
@@ -325,23 +326,23 @@ func (m *Model) viewFocus() string {
 	s += checkboxStyle.Render(fmt.Sprintf("[%s] %s / %s", bar, formatDuration(elapsed), formatDuration(totalDuration))) + "\n\n"
 
 	if m.IsPaused {
-		s += subtleStyle.Render("(q) quit | (d) done | (p) resume | (s) skip session (PAUSED)")
+		s += subtleStyle.Render(i18n.T("pomo.focus_paused"))
 	} else {
-		s += subtleStyle.Render("(q) quit | (d) done | (p) pause | (s) skip session")
+		s += subtleStyle.Render(i18n.T("pomo.focus_running"))
 	}
 	return s
 }
 
 func (m *Model) viewBreakChoice() string {
 	var s string
-	s += titleStyle.Render("Great job! Start a short break?") + "\n\n"
-	s += "(b) Start Short Break (5:00) | (n) Next Task | (q) Quit"
+	s += titleStyle.Render(i18n.T("pomo.break_choice_title")) + "\n\n"
+	s += i18n.T("pomo.break_choice_options")
 	return s
 }
 
 func (m *Model) viewBreak() string {
 	var s string
-	s += titleStyle.Render("Short Break") + "\n\n"
+	s += titleStyle.Render(i18n.T("pomo.break_title")) + "\n\n"
 
 	elapsed := time.Since(m.StartTime)
 	totalDuration := time.Duration(m.Config.Pomodoro.BreakMinutes) * time.Minute
@@ -362,14 +363,14 @@ func (m *Model) viewBreak() string {
 
 	s += checkboxStyle.Render(fmt.Sprintf("[%s] %s / %s", bar, formatDuration(elapsed), formatDuration(totalDuration))) + "\n\n"
 
-	s += subtleStyle.Render("(s) Skip break | (q) Quit")
+	s += subtleStyle.Render(i18n.T("pomo.break_skip"))
 	return s
 }
 
 func (m *Model) viewBreakDone() string {
 	var s string
-	s += titleStyle.Render("Break finished. What's next?") + "\n\n"
-	s += "(c) Continue same task | (n) Next task | (q) Quit"
+	s += titleStyle.Render(i18n.T("pomo.break_done_title")) + "\n\n"
+	s += i18n.T("pomo.break_done_options")
 	return s
 }
 

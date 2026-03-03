@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/bubbletea"
+	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/config"
 	"github.com/f6o/qai/internal/pomo"
 	"github.com/f6o/qai/internal/storage"
@@ -12,11 +13,11 @@ import (
 
 var pomoCmd = &cobra.Command{
 	Use:   "pomo",
-	Short: "Start Pomodoro session",
+	Short: i18n.T("cmd.pomo.short"),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("failed to load config: %w", err)
+			return fmt.Errorf(i18n.T("cmd.pomo.error_config"), err)
 		}
 
 		ts := storage.NewTaskStorage(cfg.Data.Todofile)
@@ -26,7 +27,7 @@ var pomoCmd = &cobra.Command{
 		p := tea.NewProgram(&m, tea.WithInput(cmd.InOrStdin()), tea.WithOutput(cmd.OutOrStdout()))
 
 		if _, err := p.Run(); err != nil {
-			return fmt.Errorf("failed to run pomo: %w", err)
+			return fmt.Errorf(i18n.T("cmd.pomo.error_run"), err)
 		}
 
 		return nil
