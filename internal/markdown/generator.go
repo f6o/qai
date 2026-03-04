@@ -7,6 +7,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/model"
 )
 
@@ -34,7 +35,7 @@ func (g *Generator) Generate(tasks []model.Task, date time.Time) (string, error)
 		result += fmt.Sprintf("## %s\n\n", idea.Title)
 
 		if len(children) == 0 {
-			result += "タスクに分解されていません。\n\n"
+			result += i18n.T("md.generator.no_tasks") + "\n\n"
 		} else {
 			sort.Slice(children, func(i, j int) bool {
 				return children[i].Priority > children[j].Priority
@@ -47,7 +48,7 @@ func (g *Generator) Generate(tasks []model.Task, date time.Time) (string, error)
 	}
 
 	if len(orphanTodos) > 0 {
-		result += "## 雑多なタスク\n\n"
+		result += "## " + i18n.T("md.generator.miscellaneous_tasks") + "\n\n"
 		sort.Slice(orphanTodos, func(i, j int) bool {
 			return orphanTodos[i].Priority > orphanTodos[j].Priority
 		})
