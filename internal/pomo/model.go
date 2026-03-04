@@ -34,10 +34,11 @@ type Model struct {
 	SelectedIdx  int
 	FocusedTask  *model.Task
 
-	StartTime time.Time
-	TimeLeft  time.Duration
-	IsPaused  bool
-	PausedAt  time.Time
+	StartTime   time.Time
+	CompletedAt time.Time
+	TimeLeft    time.Duration
+	IsPaused    bool
+	PausedAt    time.Time
 
 	SessionType       string
 	CompletedSessions int
@@ -55,10 +56,11 @@ func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorag
 		SelectedIdx:  0,
 		FocusedTask:  nil,
 
-		StartTime: time.Time{},
-		TimeLeft:  0,
-		IsPaused:  false,
-		PausedAt:  time.Time{},
+		StartTime:   time.Time{},
+		CompletedAt: time.Time{},
+		TimeLeft:    0,
+		IsPaused:    false,
+		PausedAt:    time.Time{},
 
 		SessionType:       "work",
 		CompletedSessions: 0,
@@ -128,6 +130,7 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.CurrentState = StateFocus
 			m.SessionType = "work"
 			m.StartTime = time.Now()
+			m.CompletedAt = time.Time{}
 			m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
 			m.IsPaused = false
 			m.saveMarkdown()
@@ -147,6 +150,7 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		elapsed := time.Since(m.StartTime)
 		m.saveLog(m.FocusedTask.ID, "Task completed", int(elapsed.Minutes()))
 		m.saveMarkdown()
+		m.CompletedAt = time.Now()
 		m.CurrentState = StateBreakChoice
 	case "p":
 		if m.IsPaused {
@@ -160,9 +164,11 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "s":
 		m.CompletedSessions++
+		m.CompletedAt = time.Now()
 		m.saveLog(m.FocusedTask.ID, "Session skipped", 0)
 		m.CurrentState = StateBreakChoice
 	case "q", "ctrl+c", "esc":
+		m.CompletedAt = time.Now()
 		m.CurrentState = StateBreakChoice
 	}
 	return m, nil
@@ -174,6 +180,7 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CurrentState = StateBreak
 		m.SessionType = "break"
 		m.StartTime = time.Now()
+		m.CompletedAt = time.Time{}
 		m.TimeLeft = time.Duration(m.Config.Pomodoro.BreakMinutes) * time.Minute
 		m.IsPaused = false
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
@@ -203,6 +210,7 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CurrentState = StateFocus
 		m.SessionType = "work"
 		m.StartTime = time.Now()
+		m.CompletedAt = time.Time{}
 		m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
 		m.IsPaused = false
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
@@ -230,6 +238,7 @@ func (m *Model) handleTick(msg TickMsg) (tea.Model, tea.Cmd) {
 	if m.TimeLeft <= 0 {
 		if m.CurrentState == StateFocus {
 			m.CompletedSessions++
+			m.CompletedAt = time.Now()
 			m.saveLog(m.FocusedTask.ID, "25min focus", 25)
 			m.CurrentState = StateBreakChoice
 		} else if m.CurrentState == StateBreak {
@@ -306,6 +315,8 @@ func (m *Model) viewFocus() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.focusing_on", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
 
+	s += subtleStyle.Render(fmt.Sprintf("Started: %s", m.StartTime.Format("15:04"))) + "\n\n"
+
 	elapsed := time.Since(m.StartTime)
 	totalDuration := time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
 	if elapsed > totalDuration {
@@ -336,6 +347,8 @@ func (m *Model) viewFocus() string {
 func (m *Model) viewBreakChoice() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.break_choice_title")) + "\n\n"
+
+	s += subtleStyle.Render(fmt.Sprintf("Completed at: %s", m.CompletedAt.Format("15:04"))) + "\n\n"
 	s += i18n.T("pomo.break_choice_options")
 	return s
 }
