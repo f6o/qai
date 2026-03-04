@@ -153,14 +153,16 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CompletedAt = time.Now()
 		m.CurrentState = StateBreakChoice
 	case "p":
+		if !m.IsPaused {
+			m.IsPaused = true
+			m.PausedAt = time.Now()
+		}
+	case "r":
 		if m.IsPaused {
 			m.IsPaused = false
 			pausedDuration := time.Since(m.PausedAt)
 			m.StartTime = m.StartTime.Add(pausedDuration)
 			return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
-		} else {
-			m.IsPaused = true
-			m.PausedAt = time.Now()
 		}
 	case "s":
 		m.CompletedSessions++
