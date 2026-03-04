@@ -350,6 +350,10 @@ func (m *Model) viewBreakChoice() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.break_choice_title")) + "\n\n"
 
+	if m.FocusedTask != nil {
+		s += subtleStyle.Render(i18n.T("pomo.current_task", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
+	}
+
 	s += subtleStyle.Render(fmt.Sprintf("Completed at: %s", m.CompletedAt.Format("15:04"))) + "\n\n"
 	s += i18n.T("pomo.break_choice_options")
 	return s
@@ -358,6 +362,10 @@ func (m *Model) viewBreakChoice() string {
 func (m *Model) viewBreak() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.break_title")) + "\n\n"
+
+	if m.FocusedTask != nil {
+		s += subtleStyle.Render(i18n.T("pomo.current_task", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
+	}
 
 	elapsed := time.Since(m.StartTime)
 	totalDuration := time.Duration(m.Config.Pomodoro.BreakMinutes) * time.Minute
@@ -385,6 +393,11 @@ func (m *Model) viewBreak() string {
 func (m *Model) viewBreakDone() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.break_done_title")) + "\n\n"
+
+	if m.FocusedTask != nil {
+		s += subtleStyle.Render(i18n.T("pomo.current_task", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
+	}
+
 	s += i18n.T("pomo.break_done_options")
 	return s
 }
