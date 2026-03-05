@@ -2,6 +2,7 @@ package pomo
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/charmbracelet/bubbletea"
@@ -84,6 +85,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case []model.Task:
 		m.Tasks = msg
+		if m.FocusedTask != nil {
+			for i := range m.Tasks {
+				if m.Tasks[i].ID == m.FocusedTask.ID {
+					m.FocusedTask = &m.Tasks[i]
+					break
+				}
+			}
+		}
 		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -109,8 +118,19 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *Model) getSortedTodos() []model.Task {
 	todos := m.TaskStore.FilterTodos(m.Tasks)
+	sort.Slice(todos, func(i, j int) bool {
+		if todos[i].Priority != todos[j].Priority {
+			return todos[i].Priority > todos[j].Priority
+		}
+		return todos[i].ID < todos[j].ID
+	})
+	return todos
+}
+
+func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	todos := m.getSortedTodos()
 
 	switch msg.String() {
 	case "up", "k":
@@ -121,12 +141,40 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.SelectedIdx < len(todos)-1 {
 			m.SelectedIdx++
 		}
+	case "+", "-":
+		if len(todos) > 0 {
+			task := todos[m.SelectedIdx]
+			if msg.String() == "+" {
+				task.Priority++
+			} else {
+				task.Priority--
+			}
+			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
+
+			// Re-sort and find new index to keep cursor on the same task
+			newTodos := m.getSortedTodos()
+			for i, t := range newTodos {
+				if t.ID == task.ID {
+					m.SelectedIdx = i
+					break
+				}
+			}
+		}
 	case "enter":
 		if len(todos) > 0 {
-			m.FocusedTask = &todos[m.SelectedIdx]
-			m.FocusedTask.Status = model.StatusDoing
-			m.FocusedTask.StartedAt = time.Now()
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
+			task := todos[m.SelectedIdx]
+			task.Status = model.StatusDoing
+			task.StartedAt = time.Now()
+			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
+
+			// Find the task in updated m.Tasks to set FocusedTask
+			for i := range m.Tasks {
+				if m.Tasks[i].ID == task.ID {
+					m.FocusedTask = &m.Tasks[i]
+					break
+				}
+			}
+
 			m.CurrentState = StateFocus
 			m.SessionType = "work"
 			m.StartTime = time.Now()
@@ -298,14 +346,14 @@ func (m *Model) viewSelectTask() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.select_task")) + "\n\n"
 
-	todos := m.TaskStore.FilterTodos(m.Tasks)
+	todos := m.getSortedTodos()
 	for i, t := range todos {
 		prefix := "  "
 		if i == m.SelectedIdx {
 			prefix = "> "
-			s += selectedStyle.Render(fmt.Sprintf("%s[%d] [%s] %s", prefix, t.ID, t.Status, t.Title)) + "\n"
+			s += selectedStyle.Render(fmt.Sprintf("%s[%d] (P%d) [%s] %s", prefix, t.ID, t.Priority, t.Status, t.Title)) + "\n"
 		} else {
-			s += fmt.Sprintf("%s[%d] [%s] %s\n", prefix, t.ID, t.Status, t.Title)
+			s += fmt.Sprintf("%s[%d] (P%d) [%s] %s\n", prefix, t.ID, t.Priority, t.Status, t.Title)
 		}
 	}
 
