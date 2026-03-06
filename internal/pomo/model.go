@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/config"
@@ -298,12 +298,13 @@ func (m *Model) handleTick(msg TickMsg) (tea.Model, tea.Cmd) {
 	}
 
 	if m.TimeLeft <= 0 {
-		if m.CurrentState == StateFocus {
+		switch m.CurrentState {
+		case StateFocus:
 			m.CompletedSessions++
 			m.CompletedAt = time.Now()
 			m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, m.Config.Pomodoro.WorkMinutes)
 			m.CurrentState = StateBreakChoice
-		} else if m.CurrentState == StateBreak {
+		case StateBreak:
 			m.CurrentState = StateBreakDone
 		}
 		return m, nil
