@@ -2,6 +2,7 @@ package pomo
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -201,7 +202,11 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.FocusedTask.Status = model.StatusDone
 		m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
 		elapsed := time.Since(m.StartTime)
-		m.saveLog(m.FocusedTask.ID, "Task completed", int(elapsed.Minutes()))
+		duration := int(math.Round(elapsed.Minutes()))
+		if duration == 0 && elapsed > 0 {
+			duration = 1
+		}
+		m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, duration)
 		m.saveMarkdown()
 		m.CompletedAt = time.Now()
 		m.CurrentState = StateBreakChoice
@@ -220,7 +225,9 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "s":
 		m.CompletedSessions++
 		m.CompletedAt = time.Now()
-		m.saveLog(m.FocusedTask.ID, "Session skipped", 0)
+		elapsed := time.Since(m.StartTime)
+		duration := int(math.Round(elapsed.Minutes()))
+		m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, duration)
 		m.CurrentState = StateBreakChoice
 	case "q", "ctrl+c", "esc":
 		m.CompletedAt = time.Now()
@@ -294,7 +301,7 @@ func (m *Model) handleTick(msg TickMsg) (tea.Model, tea.Cmd) {
 		if m.CurrentState == StateFocus {
 			m.CompletedSessions++
 			m.CompletedAt = time.Now()
-			m.saveLog(m.FocusedTask.ID, "25min focus", 25)
+			m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, m.Config.Pomodoro.WorkMinutes)
 			m.CurrentState = StateBreakChoice
 		} else if m.CurrentState == StateBreak {
 			m.CurrentState = StateBreakDone
@@ -306,8 +313,9 @@ func (m *Model) handleTick(msg TickMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) saveLog(todoID int, content string, duration int) {
+	logs, _ := m.LogStore.Load()
 	log := model.Log{
-		ID:       m.LogStore.GetMaxID(nil) + 1,
+		ID:       m.LogStore.GetMaxID(logs) + 1,
 		TodoID:   todoID,
 		Content:  content,
 		Duration: duration,
