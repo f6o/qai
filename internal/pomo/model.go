@@ -141,13 +141,18 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.SelectedIdx < len(todos)-1 {
 			m.SelectedIdx++
 		}
-	case "+", "-":
+	case "+", "-", "<", ">":
 		if len(todos) > 0 {
 			task := todos[m.SelectedIdx]
-			if msg.String() == "+" {
+			switch msg.String() {
+			case "+":
 				task.Priority++
-			} else {
+			case "-":
 				task.Priority--
+			case ">":
+				task.Priority += 5
+			case "<":
+				task.Priority -= 5
 			}
 			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
 
