@@ -269,7 +269,7 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleTick(msg TickMsg) (tea.Model, tea.Cmd) {
+func (m *Model) handleTick(_ TickMsg) (tea.Model, tea.Cmd) {
 	if m.IsPaused {
 		return m, nil
 	}
