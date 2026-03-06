@@ -2,7 +2,6 @@ package pomo
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"time"
 
@@ -198,18 +197,6 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "d":
-		m.FocusedTask.Status = model.StatusDone
-		m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
-		elapsed := time.Since(m.StartTime)
-		duration := int(math.Round(elapsed.Minutes()))
-		if duration == 0 && elapsed > 0 {
-			duration = 1
-		}
-		m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, duration)
-		m.saveMarkdown()
-		m.CompletedAt = time.Now()
-		m.CurrentState = StateBreakChoice
 	case "p":
 		if !m.IsPaused {
 			m.IsPaused = true
@@ -223,11 +210,6 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
 		}
 	case "s":
-		m.CompletedSessions++
-		m.CompletedAt = time.Now()
-		elapsed := time.Since(m.StartTime)
-		duration := int(math.Round(elapsed.Minutes()))
-		m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, duration)
 		m.CurrentState = StateBreakChoice
 	case "q", "ctrl+c", "esc":
 		m.CompletedAt = time.Now()
