@@ -3,6 +3,7 @@ package pomo
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -371,16 +372,16 @@ func (m *Model) viewFocus() string {
 	progress := float64(elapsed) / float64(totalDuration)
 	barWidth := 20
 	filled := int(progress * float64(barWidth))
-	bar := ""
-	for i := 0; i < barWidth; i++ {
+	var bar strings.Builder
+	for i := range barWidth {
 		if i < filled {
-			bar += "█"
+			bar.WriteString("█")
 		} else {
-			bar += "░"
+			bar.WriteString("░")
 		}
 	}
 
-	s += checkboxStyle.Render(fmt.Sprintf("[%s] %s / %s", bar, formatDuration(elapsed), formatDuration(totalDuration))) + "\n\n"
+	s += checkboxStyle.Render(fmt.Sprintf("[%s] %s / %s", bar.String(), formatDuration(elapsed), formatDuration(totalDuration))) + "\n\n"
 
 	if m.IsPaused {
 		s += subtleStyle.Render(i18n.T("pomo.focus_paused"))
@@ -419,16 +420,16 @@ func (m *Model) viewBreak() string {
 	progress := float64(elapsed) / float64(totalDuration)
 	barWidth := 20
 	filled := int(progress * float64(barWidth))
-	bar := ""
-	for i := 0; i < barWidth; i++ {
+	var bar strings.Builder
+	for i := range barWidth {
 		if i < filled {
-			bar += "█"
+			bar.WriteString("█")
 		} else {
-			bar += "░"
+			bar.WriteString("░")
 		}
 	}
 
-	s += checkboxStyle.Render(fmt.Sprintf("[%s] %s / %s", bar, formatDuration(elapsed), formatDuration(totalDuration))) + "\n\n"
+	s += checkboxStyle.Render(fmt.Sprintf("[%s] %s / %s", bar.String(), formatDuration(elapsed), formatDuration(totalDuration))) + "\n\n"
 
 	s += subtleStyle.Render(i18n.T("pomo.break_skip"))
 	return s
