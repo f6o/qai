@@ -229,10 +229,8 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.TimeLeft = time.Duration(m.Config.Pomodoro.BreakMinutes) * time.Minute
 		m.IsPaused = false
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
-	case "n":
-		m.CurrentState = StateSelectTask
-		m.SelectedIdx = 0
-		m.FocusedTask = nil
+	case "s":
+		m.CurrentState = StateBreakDone
 	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
