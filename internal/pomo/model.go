@@ -13,6 +13,7 @@ import (
 	"github.com/f6o/qai/internal/markdown"
 	"github.com/f6o/qai/internal/model"
 	"github.com/f6o/qai/internal/storage"
+	"github.com/gen2brain/beeep"
 )
 
 type State int
@@ -283,9 +284,17 @@ func (m *Model) handleTick(_ TickMsg) (tea.Model, tea.Cmd) {
 		case StateFocus:
 			m.CompletedSessions++
 			m.CompletedAt = time.Now()
-			m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, m.Config.Pomodoro.WorkMinutes)
+			if m.FocusedTask != nil {
+				m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, m.Config.Pomodoro.WorkMinutes)
+			}
+			if m.Config.Pomodoro.Notify {
+				beeep.Alert("qai", i18n.T("pomo.notify_work_complete"), "")
+			}
 			m.CurrentState = StateBreakChoice
 		case StateBreak:
+			if m.Config.Pomodoro.Notify {
+				beeep.Alert("qai", i18n.T("pomo.notify_break_complete"), "")
+			}
 			m.CurrentState = StateBreakDone
 		}
 		return m, nil
@@ -358,6 +367,9 @@ func (m *Model) viewSelectTask() string {
 
 func (m *Model) viewFocus() string {
 	var s string
+	if m.FocusedTask == nil {
+		return subtleStyle.Render("No task selected")
+	}
 	s += titleStyle.Render(i18n.T("pomo.focusing_on", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
 
 	s += subtleStyle.Render(fmt.Sprintf("Started: %s", m.StartTime.Format("15:04"))) + "\n\n"
@@ -397,7 +409,9 @@ func (m *Model) viewBreakChoice() string {
 		s += subtleStyle.Render(i18n.T("pomo.current_task", m.FocusedTask.ID, m.FocusedTask.Title)) + "\n\n"
 	}
 
-	s += subtleStyle.Render(fmt.Sprintf("Completed at: %s", m.CompletedAt.Format("15:04"))) + "\n\n"
+	if !m.CompletedAt.IsZero() {
+		s += subtleStyle.Render(fmt.Sprintf("Completed at: %s", m.CompletedAt.Format("15:04"))) + "\n\n"
+	}
 	s += i18n.T("pomo.break_choice_options")
 	return s
 }

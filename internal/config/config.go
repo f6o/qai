@@ -13,8 +13,9 @@ type Config struct {
 }
 
 type PomodoroConfig struct {
-	WorkMinutes  int `mapstructure:"work_minutes"`
-	BreakMinutes int `mapstructure:"break_minutes"`
+	WorkMinutes  int  `mapstructure:"work_minutes"`
+	BreakMinutes int  `mapstructure:"break_minutes"`
+	Notify       bool `mapstructure:"notify"`
 }
 
 type DataConfig struct {
@@ -31,6 +32,7 @@ func Default() *Config {
 		Pomodoro: PomodoroConfig{
 			WorkMinutes:  25,
 			BreakMinutes: 5,
+			Notify:       true,
 		},
 		Data: DataConfig{
 			Todofile:    filepath.Join(qaiDir, "tasks.yaml"),
@@ -79,6 +81,7 @@ func (c *Config) Save() error {
 	v.SetConfigType("toml")
 	v.Set("pomodoro.work_minutes", c.Pomodoro.WorkMinutes)
 	v.Set("pomodoro.break_minutes", c.Pomodoro.BreakMinutes)
+	v.Set("pomodoro.notify", c.Pomodoro.Notify)
 	v.Set("data.todofile", c.Data.Todofile)
 	v.Set("data.logfile", c.Data.Logfile)
 	v.Set("data.markdowndir", c.Data.MarkdownDir)
