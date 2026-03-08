@@ -2,6 +2,7 @@ package storage
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/f6o/qai/internal/model"
@@ -39,7 +40,7 @@ func (s *TaskStorage) Save(tasks []model.Task) error {
 		return err
 	}
 
-	dir := s.filepath[:len(s.filepath)-len("/tasks.yaml")]
+	dir := filepath.Dir(s.filepath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
