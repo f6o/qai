@@ -258,6 +258,15 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
 		m.IsPaused = false
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
+	case "d":
+		if m.FocusedTask != nil {
+			m.FocusedTask.Status = model.StatusDone
+			m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
+			m.saveMarkdown()
+		}
+		m.CurrentState = StateSelectTask
+		m.SelectedIdx = 0
+		m.FocusedTask = nil
 	case "n":
 		m.CurrentState = StateSelectTask
 		m.SelectedIdx = 0
