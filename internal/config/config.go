@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Pomodoro PomodoroConfig `mapstructure:"pomodoro"`
 	Data     DataConfig     `mapstructure:"data"`
+	Task     TaskConfig     `mapstructure:"task"`
 }
 
 type PomodoroConfig struct {
@@ -22,6 +23,10 @@ type DataConfig struct {
 	Todofile    string `mapstructure:"todofile"`
 	Logfile     string `mapstructure:"logfile"`
 	MarkdownDir string `mapstructure:"markdowndir"`
+}
+
+type TaskConfig struct {
+	DefaultPriority int `mapstructure:"default_priority"`
 }
 
 func Default() *Config {
@@ -38,6 +43,9 @@ func Default() *Config {
 			Todofile:    filepath.Join(qaiDir, "tasks.yaml"),
 			Logfile:     filepath.Join(qaiDir, "logs.jsonl"),
 			MarkdownDir: filepath.Join(qaiDir, "markdown"),
+		},
+		Task: TaskConfig{
+			DefaultPriority: 10,
 		},
 	}
 }
@@ -85,6 +93,7 @@ func (c *Config) Save() error {
 	v.Set("data.todofile", c.Data.Todofile)
 	v.Set("data.logfile", c.Data.Logfile)
 	v.Set("data.markdowndir", c.Data.MarkdownDir)
+	v.Set("task.default_priority", c.Task.DefaultPriority)
 
 	return v.SafeWriteConfigAs(filepath.Join(qaiDir, "config.toml"))
 }

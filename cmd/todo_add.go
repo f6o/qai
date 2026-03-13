@@ -31,7 +31,7 @@ var todoAddCmd = &cobra.Command{
 		task := model.Task{
 			Title:     args[0],
 			Status:    model.StatusTodo,
-			Priority:  0,
+			Priority:  ctx.Config.Task.DefaultPriority,
 			ParentID:  nil,
 			CreatedAt: time.Now(),
 		}
