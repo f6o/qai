@@ -26,7 +26,7 @@ func NewAppContext() (*AppContext, error) {
 
 	return &AppContext{
 		Config:    cfg,
-		TaskStore: storage.NewTaskStorage(cfg.Data.Todofile),
+		TaskStore: storage.NewTaskStorage(cfg.Data.Todofile, cfg.Data.Donefile),
 		LogStore:  storage.NewLogStorage(cfg.Data.Logfile),
 	}, nil
 }

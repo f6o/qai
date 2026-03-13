@@ -21,7 +21,7 @@ var timerCmd = &cobra.Command{
 			return fmt.Errorf(i18n.T("cmd.timer.error_config"), err)
 		}
 
-		ts := storage.NewTaskStorage(cfg.Data.Todofile)
+		ts := storage.NewTaskStorage(cfg.Data.Todofile, cfg.Data.Donefile)
 		ls := storage.NewLogStorage(cfg.Data.Logfile)
 
 		m := pomo.NewModel(cfg, ts, ls)

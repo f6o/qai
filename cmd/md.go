@@ -21,7 +21,7 @@ var mdCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
+		tasks, err := ctx.TaskStore.LoadAll()
 		if err != nil {
 			return err
 		}

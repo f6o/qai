@@ -10,15 +10,16 @@ import (
 )
 
 type TaskStorage struct {
-	filepath string
+	filepath     string
+	doneFilepath string
 }
 
-func NewTaskStorage(filepath string) *TaskStorage {
-	return &TaskStorage{filepath: filepath}
+func NewTaskStorage(filepath, doneFilepath string) *TaskStorage {
+	return &TaskStorage{filepath: filepath, doneFilepath: doneFilepath}
 }
 
-func (s *TaskStorage) Load() ([]model.Task, error) {
-	data, err := os.ReadFile(s.filepath)
+func (s *TaskStorage) loadFile(path string) ([]model.Task, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []model.Task{}, nil
@@ -34,18 +35,73 @@ func (s *TaskStorage) Load() ([]model.Task, error) {
 	return tasks, nil
 }
 
-func (s *TaskStorage) Save(tasks []model.Task) error {
+func (s *TaskStorage) writeFile(path string, tasks []model.Task) error {
 	data, err := yaml.Marshal(tasks)
 	if err != nil {
 		return err
 	}
 
-	dir := filepath.Dir(s.filepath)
+	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
 
-	return os.WriteFile(s.filepath, data, 0644)
+	return os.WriteFile(path, data, 0644)
+}
+
+func (s *TaskStorage) Load() ([]model.Task, error) {
+	return s.loadFile(s.filepath)
+}
+
+func (s *TaskStorage) LoadDone() ([]model.Task, error) {
+	return s.loadFile(s.doneFilepath)
+}
+
+func (s *TaskStorage) LoadAll() ([]model.Task, error) {
+	active, err := s.loadFile(s.filepath)
+	if err != nil {
+		return nil, err
+	}
+	done, err := s.loadFile(s.doneFilepath)
+	if err != nil {
+		return nil, err
+	}
+	return append(active, done...), nil
+}
+
+func (s *TaskStorage) Save(tasks []model.Task) error {
+	var active []model.Task
+	var done []model.Task
+	for _, t := range tasks {
+		if t.Status == model.StatusDone {
+			done = append(done, t)
+		} else {
+			active = append(active, t)
+		}
+	}
+
+	// Write done.yaml first to minimize data loss on crash
+	if len(done) > 0 {
+		if err := s.appendDone(done); err != nil {
+			return err
+		}
+	}
+
+	return s.writeFile(s.filepath, active)
+}
+
+func (s *TaskStorage) appendDone(newDone []model.Task) error {
+	existing, _ := s.loadFile(s.doneFilepath)
+	idSet := make(map[int]bool)
+	for _, t := range existing {
+		idSet[t.ID] = true
+	}
+	for _, t := range newDone {
+		if !idSet[t.ID] {
+			existing = append(existing, t)
+		}
+	}
+	return s.writeFile(s.doneFilepath, existing)
 }
 
 func (s *TaskStorage) GetMaxID(tasks []model.Task) int {
@@ -60,7 +116,8 @@ func (s *TaskStorage) GetMaxID(tasks []model.Task) int {
 
 func (s *TaskStorage) Add(tasks []model.Task, task model.Task) ([]model.Task, error) {
 	if task.ID == 0 {
-		task.ID = s.GetMaxID(tasks) + 1
+		allTasks, _ := s.LoadAll()
+		task.ID = s.GetMaxID(allTasks) + 1
 	}
 	tasks = append(tasks, task)
 	return tasks, s.Save(tasks)

@@ -20,6 +20,7 @@ type PomodoroConfig struct {
 
 type DataConfig struct {
 	Todofile    string `mapstructure:"todofile"`
+	Donefile    string `mapstructure:"donefile"`
 	Logfile     string `mapstructure:"logfile"`
 	MarkdownDir string `mapstructure:"markdowndir"`
 }
@@ -36,6 +37,7 @@ func Default() *Config {
 		},
 		Data: DataConfig{
 			Todofile:    filepath.Join(qaiDir, "tasks.yaml"),
+			Donefile:    filepath.Join(qaiDir, "done.yaml"),
 			Logfile:     filepath.Join(qaiDir, "logs.jsonl"),
 			MarkdownDir: filepath.Join(qaiDir, "markdown"),
 		},
@@ -83,6 +85,7 @@ func (c *Config) Save() error {
 	v.Set("pomodoro.break_minutes", c.Pomodoro.BreakMinutes)
 	v.Set("pomodoro.notify", c.Pomodoro.Notify)
 	v.Set("data.todofile", c.Data.Todofile)
+	v.Set("data.donefile", c.Data.Donefile)
 	v.Set("data.logfile", c.Data.Logfile)
 	v.Set("data.markdowndir", c.Data.MarkdownDir)
 
