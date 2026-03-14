@@ -45,23 +45,29 @@ var statsCmd = &cobra.Command{
 		cmd.Printf("  "+i18n.T("cmd.stats.done")+"\n", doneCount)
 		cmd.Println()
 
+		focusLogs := ctx.LogStore.FilterByEventType(logs, "focus_complete")
 		cmd.Println(i18n.T("cmd.stats.logs_header"))
-		cmd.Printf("  "+i18n.T("cmd.stats.logs_total_sessions")+"\n", len(logs))
+		cmd.Printf("  "+i18n.T("cmd.stats.logs_total_sessions")+"\n", len(focusLogs))
 
 		var totalMinutes int
-		for _, l := range logs {
-			totalMinutes += l.Duration
+		for _, l := range focusLogs {
+			if l.Duration != nil {
+				totalMinutes += *l.Duration
+			}
 		}
 		cmd.Printf("  "+i18n.T("cmd.stats.logs_total_focus_time")+"\n", totalMinutes)
 		cmd.Println()
 
 		today := time.Now()
 		todayLogs := ctx.LogStore.FilterByDate(logs, today.Year(), int(today.Month()), today.Day())
+		todayFocusLogs := ctx.LogStore.FilterByEventType(todayLogs, "focus_complete")
 		cmd.Println(i18n.T("cmd.stats.today_header"))
-		cmd.Printf("  "+i18n.T("cmd.stats.today_sessions")+"\n", len(todayLogs))
+		cmd.Printf("  "+i18n.T("cmd.stats.today_sessions")+"\n", len(todayFocusLogs))
 		var todayMinutes int
-		for _, l := range todayLogs {
-			todayMinutes += l.Duration
+		for _, l := range todayFocusLogs {
+			if l.Duration != nil {
+				todayMinutes += *l.Duration
+			}
 		}
 		cmd.Printf("  "+i18n.T("cmd.stats.today_focus_time")+"\n", todayMinutes)
 
@@ -69,7 +75,11 @@ var statsCmd = &cobra.Command{
 			cmd.Println()
 			cmd.Println(i18n.T("cmd.stats.today_logs"))
 			for _, l := range todayLogs {
-				cmd.Printf("  "+i18n.T("cmd.stats.today_log_item")+"\n", l.LoggedAt.Format("15:04"), l.TodoID, l.Content, l.Duration)
+				dur := 0
+				if l.Duration != nil {
+					dur = *l.Duration
+				}
+				cmd.Printf("  "+i18n.T("cmd.stats.today_log_item")+"\n", l.LoggedAt.Format("15:04"), l.TodoID, l.EffectiveEventType(), dur)
 			}
 		}
 

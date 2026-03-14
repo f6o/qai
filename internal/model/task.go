@@ -23,10 +23,34 @@ type Task struct {
 	CreatedAt time.Time `yaml:"created_at" json:"created_at"`
 }
 
+type EventType string
+
+const (
+	EventFocusComplete EventType = "focus_complete"
+	EventFocusSkip     EventType = "focus_skip"
+	EventFocusQuit     EventType = "focus_quit"
+	EventTaskCreate    EventType = "task_create"
+	EventStatusChange  EventType = "status_change"
+)
+
 type Log struct {
-	ID       int       `json:"id"`
-	TodoID   int       `json:"todo_id"`
-	Content  string    `json:"content"`
-	Duration int       `json:"duration"`
-	LoggedAt time.Time `json:"logged_at"`
+	ID         int       `json:"id"`
+	TodoID     int       `json:"todo_id"`
+	Content    string    `json:"content,omitempty"`
+	Duration   *int      `json:"duration,omitempty"`
+	LoggedAt   time.Time `json:"logged_at"`
+	EventType  EventType `json:"event_type,omitempty"`
+	FromStatus Status    `json:"from_status,omitempty"`
+	ToStatus   Status    `json:"to_status,omitempty"`
+}
+
+func (l Log) EffectiveEventType() EventType {
+	if l.EventType == "" {
+		return EventFocusComplete
+	}
+	return l.EventType
+}
+
+func IntPtr(v int) *int {
+	return &v
 }

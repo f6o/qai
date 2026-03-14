@@ -46,6 +46,11 @@ var todoAddCmd = &cobra.Command{
 		}
 
 		task = tasks[len(tasks)-1]
+		ctx.LogStore.AppendNew(model.Log{
+			TodoID:    task.ID,
+			Content:   task.Title,
+			EventType: model.EventTaskCreate,
+		})
 		cmd.Println(i18n.T("cmd.todo_add.success", task.Title, task.ID))
 		return nil
 	},

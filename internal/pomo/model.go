@@ -174,6 +174,13 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			task.StartedAt = time.Now()
 			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
 
+			m.LogStore.AppendNew(model.Log{
+				TodoID:     task.ID,
+				EventType:  model.EventStatusChange,
+				FromStatus: model.StatusTodo,
+				ToStatus:   model.StatusDoing,
+			})
+
 			// Find the task in updated m.Tasks to set FocusedTask
 			for i := range m.Tasks {
 				if m.Tasks[i].ID == task.ID {
@@ -212,8 +219,24 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
 		}
 	case "s":
+		if m.FocusedTask != nil {
+			elapsed := int(time.Since(m.StartTime).Minutes())
+			m.LogStore.AppendNew(model.Log{
+				TodoID:    m.FocusedTask.ID,
+				Duration:  model.IntPtr(elapsed),
+				EventType: model.EventFocusSkip,
+			})
+		}
 		m.CurrentState = StateBreakChoice
 	case "q", "ctrl+c", "esc":
+		if m.FocusedTask != nil {
+			elapsed := int(time.Since(m.StartTime).Minutes())
+			m.LogStore.AppendNew(model.Log{
+				TodoID:    m.FocusedTask.ID,
+				Duration:  model.IntPtr(elapsed),
+				EventType: model.EventFocusQuit,
+			})
+		}
 		m.CompletedAt = time.Now()
 		m.CurrentState = StateBreakChoice
 	}
@@ -262,6 +285,12 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.FocusedTask != nil {
 			m.FocusedTask.Status = model.StatusDone
 			m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
+			m.LogStore.AppendNew(model.Log{
+				TodoID:     m.FocusedTask.ID,
+				EventType:  model.EventStatusChange,
+				FromStatus: model.StatusDoing,
+				ToStatus:   model.StatusDone,
+			})
 			m.saveMarkdown()
 		}
 		m.CurrentState = StateSelectTask
@@ -294,7 +323,11 @@ func (m *Model) handleTick(_ TickMsg) (tea.Model, tea.Cmd) {
 			m.CompletedSessions++
 			m.CompletedAt = time.Now()
 			if m.FocusedTask != nil {
-				m.saveLog(m.FocusedTask.ID, m.FocusedTask.Title, m.Config.Pomodoro.WorkMinutes)
+				m.LogStore.AppendNew(model.Log{
+					TodoID:    m.FocusedTask.ID,
+					Duration:  model.IntPtr(m.Config.Pomodoro.WorkMinutes),
+					EventType: model.EventFocusComplete,
+				})
 			}
 			if m.Config.Pomodoro.Notify {
 				beeep.Alert("qai", i18n.T("pomo.notify_work_complete"), "")
@@ -310,18 +343,6 @@ func (m *Model) handleTick(_ TickMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
-}
-
-func (m *Model) saveLog(todoID int, content string, duration int) {
-	logs, _ := m.LogStore.Load()
-	log := model.Log{
-		ID:       m.LogStore.GetMaxID(logs) + 1,
-		TodoID:   todoID,
-		Content:  content,
-		Duration: duration,
-		LoggedAt: time.Now(),
-	}
-	m.LogStore.Append(log)
 }
 
 func (m *Model) saveMarkdown() {

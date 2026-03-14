@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/f6o/qai/internal/model"
 )
@@ -98,4 +99,24 @@ func (s *LogStorage) FindByID(logs []model.Log, id int) *model.Log {
 		return nil
 	}
 	return &logs[idx]
+}
+
+func (s *LogStorage) AppendNew(log model.Log) error {
+	logs, err := s.Load()
+	if err != nil {
+		return err
+	}
+	log.ID = s.GetMaxID(logs) + 1
+	log.LoggedAt = time.Now()
+	return s.Append(log)
+}
+
+func (s *LogStorage) FilterByEventType(logs []model.Log, eventType model.EventType) []model.Log {
+	result := make([]model.Log, 0)
+	for _, l := range logs {
+		if l.EffectiveEventType() == eventType {
+			result = append(result, l)
+		}
+	}
+	return result
 }
