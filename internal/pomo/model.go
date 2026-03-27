@@ -280,6 +280,12 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.CompletedAt = time.Time{}
 		m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
 		m.IsPaused = false
+		if m.FocusedTask != nil {
+			m.LogStore.AppendNew(model.Log{
+				TodoID:    m.FocusedTask.ID,
+				EventType: model.EventTaskContinue,
+			})
+		}
 		return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
 	case "d":
 		if m.FocusedTask != nil {

@@ -30,6 +30,7 @@ const (
 	EventFocusSkip     EventType = "focus_skip"
 	EventFocusQuit     EventType = "focus_quit"
 	EventTaskCreate    EventType = "task_create"
+	EventTaskContinue  EventType = "task_continue"
 	EventStatusChange  EventType = "status_change"
 )
 
