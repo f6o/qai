@@ -135,11 +135,11 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	todos := m.getSortedTodos()
 
 	switch msg.String() {
-	case "up", "k":
+	case "ctrl+p", "up", "k":
 		if m.SelectedIdx > 0 {
 			m.SelectedIdx--
 		}
-	case "down", "j":
+	case "ctrl+n", "down", "j":
 		if m.SelectedIdx < len(todos)-1 {
 			m.SelectedIdx++
 		}
