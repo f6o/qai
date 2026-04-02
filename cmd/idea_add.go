@@ -18,11 +18,6 @@ var ideaAddCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
-		if err != nil {
-			return err
-		}
-
 		task := model.Task{
 			Title:     args[0],
 			Status:    model.StatusIdea,
@@ -31,13 +26,12 @@ var ideaAddCmd = &cobra.Command{
 			CreatedAt: time.Now(),
 		}
 
-		tasks, err = ctx.TaskStore.Add(tasks, task)
+		task, err = ctx.Tasks.AddTask(cmd.Context(), task)
 		if err != nil {
 			return err
 		}
 
-		task = tasks[len(tasks)-1]
-		ctx.LogStore.AppendNew(model.Log{
+		ctx.Logs.AppendLog(cmd.Context(), model.Log{
 			TodoID:    task.ID,
 			Content:   task.Title,
 			EventType: model.EventTaskCreate,

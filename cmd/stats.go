@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/f6o/qai/i18n"
+	"github.com/f6o/qai/internal/model"
+	"github.com/f6o/qai/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -16,12 +18,12 @@ var statsCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
+		tasks, err := ctx.Tasks.ListTasks(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		logs, err := ctx.LogStore.Load()
+		logs, err := ctx.Logs.ListLogs(cmd.Context(), service.LogListOptions{})
 		if err != nil {
 			return err
 		}
@@ -32,8 +34,8 @@ var statsCmd = &cobra.Command{
 		cmd.Println(i18n.T("cmd.stats.tasks_header"))
 		cmd.Printf("  "+i18n.T("cmd.stats.tasks_total")+"\n", len(tasks))
 
-		ideas := ctx.TaskStore.FilterIdeas(tasks)
-		todos := ctx.TaskStore.FilterTodos(tasks)
+		ideas := model.FilterIdeas(tasks)
+		todos := model.FilterTodos(tasks)
 		var doneCount int
 		for _, t := range tasks {
 			if t.Status == "done" {
@@ -45,7 +47,7 @@ var statsCmd = &cobra.Command{
 		cmd.Printf("  "+i18n.T("cmd.stats.done")+"\n", doneCount)
 		cmd.Println()
 
-		focusLogs := ctx.LogStore.FilterByEventType(logs, "focus_complete")
+		focusLogs := model.FilterLogsByEventType(logs, "focus_complete")
 		cmd.Println(i18n.T("cmd.stats.logs_header"))
 		cmd.Printf("  "+i18n.T("cmd.stats.logs_total_sessions")+"\n", len(focusLogs))
 
@@ -59,8 +61,8 @@ var statsCmd = &cobra.Command{
 		cmd.Println()
 
 		today := time.Now()
-		todayLogs := ctx.LogStore.FilterByDate(logs, today.Year(), int(today.Month()), today.Day())
-		todayFocusLogs := ctx.LogStore.FilterByEventType(todayLogs, "focus_complete")
+		todayLogs := model.FilterLogsByDate(logs, today.Year(), int(today.Month()), today.Day())
+		todayFocusLogs := model.FilterLogsByEventType(todayLogs, "focus_complete")
 		cmd.Println(i18n.T("cmd.stats.today_header"))
 		cmd.Printf("  "+i18n.T("cmd.stats.today_sessions")+"\n", len(todayFocusLogs))
 		var todayMinutes int

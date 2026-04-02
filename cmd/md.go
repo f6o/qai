@@ -21,7 +21,7 @@ var mdCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
+		tasks, err := ctx.Tasks.ListTasks(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -31,7 +31,7 @@ var mdCmd = &cobra.Command{
 		if len(args) > 0 {
 			var id int
 			fmt.Sscanf(args[0], "%d", &id)
-			task := ctx.TaskStore.FindByID(tasks, id)
+			task := model.FindTaskByID(tasks, id)
 			if task == nil {
 				cmd.Println(i18n.T("cmd.md.not_found", id))
 				return nil
@@ -39,7 +39,7 @@ var mdCmd = &cobra.Command{
 
 			if task.Status == model.StatusIdea || task.ParentID != nil {
 				cmd.Printf("## %s\n\n", task.Title)
-				children := ctx.TaskStore.FilterByParentID(tasks, id)
+				children := model.FilterByParentID(tasks, id)
 				for _, child := range children {
 					checkbox := "[ ]"
 					switch child.Status {

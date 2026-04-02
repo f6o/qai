@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/f6o/qai/i18n"
+	"github.com/f6o/qai/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -17,12 +18,12 @@ var todoListCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
+		tasks, err := ctx.Tasks.ListTasks(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		todos := ctx.TaskStore.FilterTodos(tasks)
+		todos := model.FilterTodos(tasks)
 		if len(todos) == 0 {
 			cmd.Println(i18n.T("cmd.todo_list.empty"))
 			return nil

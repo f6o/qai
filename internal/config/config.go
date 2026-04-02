@@ -11,6 +11,12 @@ type Config struct {
 	Pomodoro PomodoroConfig `mapstructure:"pomodoro"`
 	Data     DataConfig     `mapstructure:"data"`
 	Task     TaskConfig     `mapstructure:"task"`
+	Server   ServerConfig   `mapstructure:"server"`
+}
+
+type ServerConfig struct {
+	Mode       string `mapstructure:"mode"`
+	SocketPath string `mapstructure:"socket_path"`
 }
 
 type PomodoroConfig struct {
@@ -46,6 +52,10 @@ func Default() *Config {
 		},
 		Task: TaskConfig{
 			DefaultPriority: 10,
+		},
+		Server: ServerConfig{
+			Mode:       "local",
+			SocketPath: filepath.Join(qaiDir, "qai.sock"),
 		},
 	}
 }
@@ -94,6 +104,8 @@ func (c *Config) Save() error {
 	v.Set("data.logfile", c.Data.Logfile)
 	v.Set("data.markdowndir", c.Data.MarkdownDir)
 	v.Set("task.default_priority", c.Task.DefaultPriority)
+	v.Set("server.mode", c.Server.Mode)
+	v.Set("server.socket_path", c.Server.SocketPath)
 
 	return v.SafeWriteConfigAs(filepath.Join(qaiDir, "config.toml"))
 }

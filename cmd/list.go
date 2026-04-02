@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/f6o/qai/i18n"
+	"github.com/f6o/qai/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -17,13 +18,13 @@ var listCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
+		tasks, err := ctx.Tasks.ListTasks(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		ideas := ctx.TaskStore.FilterIdeas(tasks)
-		todos := ctx.TaskStore.FilterTodos(tasks)
+		ideas := model.FilterIdeas(tasks)
+		todos := model.FilterTodos(tasks)
 
 		sort.Slice(todos, func(i, j int) bool {
 			return todos[i].Priority > todos[j].Priority

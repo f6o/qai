@@ -5,6 +5,7 @@ import (
 
 	"github.com/f6o/qai/i18n"
 	"github.com/f6o/qai/internal/model"
+	"github.com/f6o/qai/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -17,14 +18,16 @@ var logsCmd = &cobra.Command{
 			return err
 		}
 
-		logs, err := ctx.LogStore.Load()
-		if err != nil {
-			return err
-		}
-
+		opts := service.LogListOptions{}
 		eventTypeFlag, _ := cmd.Flags().GetString("type")
 		if eventTypeFlag != "" {
-			logs = ctx.LogStore.FilterByEventType(logs, model.EventType(eventTypeFlag))
+			et := model.EventType(eventTypeFlag)
+			opts.EventType = &et
+		}
+
+		logs, err := ctx.Logs.ListLogs(cmd.Context(), opts)
+		if err != nil {
+			return err
 		}
 
 		if len(logs) == 0 {

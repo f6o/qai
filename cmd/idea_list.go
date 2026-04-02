@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/f6o/qai/i18n"
+	"github.com/f6o/qai/internal/model"
 	"github.com/spf13/cobra"
 )
 
@@ -16,12 +17,12 @@ var ideaListCmd = &cobra.Command{
 			return err
 		}
 
-		tasks, err := ctx.TaskStore.Load()
+		tasks, err := ctx.Tasks.ListTasks(cmd.Context())
 		if err != nil {
 			return err
 		}
 
-		ideas := ctx.TaskStore.FilterIdeas(tasks)
+		ideas := model.FilterIdeas(tasks)
 		if len(ideas) == 0 {
 			cmd.Println(i18n.T("cmd.idea_list.empty"))
 			return nil

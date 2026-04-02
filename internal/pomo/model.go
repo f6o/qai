@@ -1,6 +1,7 @@
 package pomo
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -12,7 +13,7 @@ import (
 	"github.com/f6o/qai/internal/config"
 	"github.com/f6o/qai/internal/markdown"
 	"github.com/f6o/qai/internal/model"
-	"github.com/f6o/qai/internal/storage"
+	"github.com/f6o/qai/internal/service"
 	"github.com/gen2brain/beeep"
 )
 
@@ -28,8 +29,8 @@ const (
 
 type Model struct {
 	Tasks       []model.Task
-	TaskStore   *storage.TaskStorage
-	LogStore    *storage.LogStorage
+	TaskSvc     service.TaskService
+	LogSvc      service.LogService
 	Config      *config.Config
 	MarkdownGen *markdown.Generator
 
@@ -47,11 +48,11 @@ type Model struct {
 	CompletedSessions int
 }
 
-func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorage) Model {
+func NewModel(cfg *config.Config, ts service.TaskService, ls service.LogService) Model {
 	return Model{
 		Tasks:       nil,
-		TaskStore:   ts,
-		LogStore:    ls,
+		TaskSvc:     ts,
+		LogSvc:      ls,
 		Config:      cfg,
 		MarkdownGen: markdown.NewGenerator(cfg.Data.MarkdownDir),
 
@@ -72,7 +73,7 @@ func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorag
 
 func (m *Model) Init() tea.Cmd {
 	loadTasks := func() tea.Msg {
-		tasks, err := m.TaskStore.Load()
+		tasks, err := m.TaskSvc.ListTasks(context.Background())
 		if err != nil {
 			return tea.Msg(fmt.Sprintf("Error: %v", err))
 		}
@@ -121,7 +122,7 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) getSortedTodos() []model.Task {
-	todos := m.TaskStore.FilterTodos(m.Tasks)
+	todos := model.FilterTodos(m.Tasks)
 	sort.Slice(todos, func(i, j int) bool {
 		if todos[i].Priority != todos[j].Priority {
 			return todos[i].Priority > todos[j].Priority
@@ -156,7 +157,14 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			case "<":
 				task.Priority -= 5
 			}
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
+			updated, _ := m.TaskSvc.UpdateTask(context.Background(), task)
+			// Update local tasks list
+			for i := range m.Tasks {
+				if m.Tasks[i].ID == updated.ID {
+					m.Tasks[i] = updated
+					break
+				}
+			}
 
 			// Re-sort and find new index to keep cursor on the same task
 			newTodos := m.getSortedTodos()
@@ -172,9 +180,15 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			task := todos[m.SelectedIdx]
 			task.Status = model.StatusDoing
 			task.StartedAt = time.Now()
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
+			updated, _ := m.TaskSvc.UpdateTask(context.Background(), task)
+			for i := range m.Tasks {
+				if m.Tasks[i].ID == updated.ID {
+					m.Tasks[i] = updated
+					break
+				}
+			}
 
-			m.LogStore.AppendNew(model.Log{
+			m.LogSvc.AppendLog(context.Background(), model.Log{
 				TodoID:     task.ID,
 				EventType:  model.EventStatusChange,
 				FromStatus: model.StatusTodo,
@@ -221,7 +235,7 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "s":
 		if m.FocusedTask != nil {
 			elapsed := int(time.Since(m.StartTime).Minutes())
-			m.LogStore.AppendNew(model.Log{
+			m.LogSvc.AppendLog(context.Background(), model.Log{
 				TodoID:    m.FocusedTask.ID,
 				Duration:  model.IntPtr(elapsed),
 				EventType: model.EventFocusSkip,
@@ -231,7 +245,7 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q", "ctrl+c", "esc":
 		if m.FocusedTask != nil {
 			elapsed := int(time.Since(m.StartTime).Minutes())
-			m.LogStore.AppendNew(model.Log{
+			m.LogSvc.AppendLog(context.Background(), model.Log{
 				TodoID:    m.FocusedTask.ID,
 				Duration:  model.IntPtr(elapsed),
 				EventType: model.EventFocusQuit,
@@ -281,7 +295,7 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
 		m.IsPaused = false
 		if m.FocusedTask != nil {
-			m.LogStore.AppendNew(model.Log{
+			m.LogSvc.AppendLog(context.Background(), model.Log{
 				TodoID:    m.FocusedTask.ID,
 				EventType: model.EventTaskContinue,
 			})
@@ -290,8 +304,14 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "d":
 		if m.FocusedTask != nil {
 			m.FocusedTask.Status = model.StatusDone
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
-			m.LogStore.AppendNew(model.Log{
+			updated, _ := m.TaskSvc.UpdateTask(context.Background(), *m.FocusedTask)
+			for i := range m.Tasks {
+				if m.Tasks[i].ID == updated.ID {
+					m.Tasks[i] = updated
+					break
+				}
+			}
+			m.LogSvc.AppendLog(context.Background(), model.Log{
 				TodoID:     m.FocusedTask.ID,
 				EventType:  model.EventStatusChange,
 				FromStatus: model.StatusDoing,
@@ -329,7 +349,7 @@ func (m *Model) handleTick(_ TickMsg) (tea.Model, tea.Cmd) {
 			m.CompletedSessions++
 			m.CompletedAt = time.Now()
 			if m.FocusedTask != nil {
-				m.LogStore.AppendNew(model.Log{
+				m.LogSvc.AppendLog(context.Background(), model.Log{
 					TodoID:    m.FocusedTask.ID,
 					Duration:  model.IntPtr(m.Config.Pomodoro.WorkMinutes),
 					EventType: model.EventFocusComplete,
