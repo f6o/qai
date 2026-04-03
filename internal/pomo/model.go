@@ -45,6 +45,8 @@ type Model struct {
 
 	SessionType       string
 	CompletedSessions int
+
+	AutoStartTaskID int
 }
 
 func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorage) Model {
@@ -95,6 +97,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+		if m.AutoStartTaskID > 0 && m.CurrentState == StateSelectTask {
+			return m.autoStartTask()
+		}
 		return m, nil
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -117,6 +122,45 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case StateBreakDone:
 		return m.handleBreakDone(msg)
 	}
+	return m, nil
+}
+
+func (m *Model) autoStartTask() (tea.Model, tea.Cmd) {
+	taskID := m.AutoStartTaskID
+	m.AutoStartTaskID = 0
+
+	for i := range m.Tasks {
+		if m.Tasks[i].ID == taskID {
+			task := m.Tasks[i]
+			task.Status = model.StatusDoing
+			task.StartedAt = time.Now()
+			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
+
+			m.LogStore.AppendNew(model.Log{
+				TodoID:     task.ID,
+				EventType:  model.EventStatusChange,
+				FromStatus: model.StatusTodo,
+				ToStatus:   model.StatusDoing,
+			})
+
+			for j := range m.Tasks {
+				if m.Tasks[j].ID == taskID {
+					m.FocusedTask = &m.Tasks[j]
+					break
+				}
+			}
+
+			m.CurrentState = StateFocus
+			m.SessionType = "work"
+			m.StartTime = time.Now()
+			m.CompletedAt = time.Time{}
+			m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
+			m.IsPaused = false
+			m.saveMarkdown()
+			return m, tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) })
+		}
+	}
+
 	return m, nil
 }
 
