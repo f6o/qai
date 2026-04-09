@@ -52,11 +52,21 @@ var todoAddCmd = &cobra.Command{
 			EventType: model.EventTaskCreate,
 		})
 		cmd.Println(i18n.T("cmd.todo_add.success", task.Title, task.ID))
+
+		startPomo, err := cmd.Flags().GetBool("start")
+		if err != nil {
+			return err
+		}
+		if startPomo {
+			return ctx.RunPomodoro(cmd, task.ID)
+		}
+
 		return nil
 	},
 }
 
 func init() {
 	todoAddCmd.Flags().IntP("parent", "p", 0, "Parent idea ID")
+	todoAddCmd.Flags().BoolP("start", "s", false, i18n.T("cmd.todo_add.flag_start"))
 	todoCmd.AddCommand(todoAddCmd)
 }
