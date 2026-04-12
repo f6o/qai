@@ -5,24 +5,36 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
+	"github.com/f6o/qai/internal/ai"
 	"github.com/f6o/qai/internal/model"
 	"github.com/ollama/ollama/api"
 )
 
-func Suggest(ctx context.Context, host, modelName string, tasks []model.Task) (string, error) {
-	base, err := url.Parse(host)
+func init() {
+	ai.Register("ollama", func(cfg *ai.ProviderConfig) (ai.Provider, error) {
+		return &Client{Host: cfg.OllamaHost, Model: cfg.OllamaModel}, nil
+	})
+}
+
+// Client implements ai.Provider for Ollama.
+type Client struct {
+	Host  string
+	Model string
+}
+
+func (c *Client) Suggest(ctx context.Context, tasks []model.Task) (string, error) {
+	base, err := url.Parse(c.Host)
 	if err != nil {
 		return "", fmt.Errorf("invalid ollama host: %w", err)
 	}
 
 	client := api.NewClient(base, http.DefaultClient)
 
-	prompt := buildPrompt(tasks)
+	prompt := ai.BuildPrompt(tasks)
 	stream := false
 	req := &api.GenerateRequest{
-		Model:  modelName,
+		Model:  c.Model,
 		Prompt: prompt,
 		Stream: &stream,
 	}
@@ -37,14 +49,4 @@ func Suggest(ctx context.Context, host, modelName string, tasks []model.Task) (s
 	}
 
 	return result, nil
-}
-
-func buildPrompt(tasks []model.Task) string {
-	var sb strings.Builder
-	sb.WriteString("Here are my recent tasks:\n")
-	for _, t := range tasks {
-		fmt.Fprintf(&sb, "- [%s] %s (priority: %d)\n", t.Status, t.Title, t.Priority)
-	}
-	sb.WriteString("\nBased on these tasks, suggest 3-5 new tasks I should consider. Format each as a single line starting with \"- \".")
-	return sb.String()
 }

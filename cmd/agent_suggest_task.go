@@ -5,7 +5,9 @@ import (
 	"sort"
 
 	"github.com/f6o/qai/i18n"
-	"github.com/f6o/qai/internal/ollama"
+	"github.com/f6o/qai/internal/ai"
+	_ "github.com/f6o/qai/internal/bedrock"
+	_ "github.com/f6o/qai/internal/ollama"
 	"github.com/spf13/cobra"
 )
 
@@ -42,9 +44,20 @@ var agentSuggestTaskCmd = &cobra.Command{
 		}
 		recent := tasks[:n]
 
+		provider, err := ai.NewProvider(&ai.ProviderConfig{
+			Name:           ctx.Config.Agent.Provider,
+			OllamaHost:     ctx.Config.Ollama.Host,
+			OllamaModel:    ctx.Config.Ollama.Model,
+			BedrockRegion:  ctx.Config.Bedrock.Region,
+			BedrockModelID: ctx.Config.Bedrock.ModelID,
+		})
+		if err != nil {
+			return err
+		}
+
 		cmd.Println(i18n.T("cmd.agent_suggest_task.thinking"))
 
-		result, err := ollama.Suggest(context.Background(), ctx.Config.Ollama.Host, ctx.Config.Ollama.Model, recent)
+		result, err := provider.Suggest(context.Background(), recent)
 		if err != nil {
 			return err
 		}

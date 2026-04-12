@@ -11,12 +11,23 @@ type Config struct {
 	Pomodoro PomodoroConfig `mapstructure:"pomodoro"`
 	Data     DataConfig     `mapstructure:"data"`
 	Task     TaskConfig     `mapstructure:"task"`
+	Agent    AgentConfig    `mapstructure:"agent"`
 	Ollama   OllamaConfig   `mapstructure:"ollama"`
+	Bedrock  BedrockConfig  `mapstructure:"bedrock"`
+}
+
+type AgentConfig struct {
+	Provider string `mapstructure:"provider"` // "ollama" or "bedrock"
 }
 
 type OllamaConfig struct {
 	Model string `mapstructure:"model"`
 	Host  string `mapstructure:"host"`
+}
+
+type BedrockConfig struct {
+	Region  string `mapstructure:"region"`
+	ModelID string `mapstructure:"model_id"`
 }
 
 type PomodoroConfig struct {
@@ -53,9 +64,16 @@ func Default() *Config {
 		Task: TaskConfig{
 			DefaultPriority: 10,
 		},
+		Agent: AgentConfig{
+			Provider: "ollama",
+		},
 		Ollama: OllamaConfig{
 			Model: "smollm2:135m",
 			Host:  "http://localhost:11434",
+		},
+		Bedrock: BedrockConfig{
+			Region:  "us-east-1",
+			ModelID: "us.anthropic.claude-sonnet-4-20250514-v1:0",
 		},
 	}
 }
@@ -104,8 +122,11 @@ func (c *Config) Save() error {
 	v.Set("data.logfile", c.Data.Logfile)
 	v.Set("data.markdowndir", c.Data.MarkdownDir)
 	v.Set("task.default_priority", c.Task.DefaultPriority)
+	v.Set("agent.provider", c.Agent.Provider)
 	v.Set("ollama.model", c.Ollama.Model)
 	v.Set("ollama.host", c.Ollama.Host)
+	v.Set("bedrock.region", c.Bedrock.Region)
+	v.Set("bedrock.model_id", c.Bedrock.ModelID)
 
 	return v.SafeWriteConfigAs(filepath.Join(qaiDir, "config.toml"))
 }
