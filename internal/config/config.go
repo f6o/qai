@@ -11,6 +11,12 @@ type Config struct {
 	Pomodoro PomodoroConfig `mapstructure:"pomodoro"`
 	Data     DataConfig     `mapstructure:"data"`
 	Task     TaskConfig     `mapstructure:"task"`
+	Ollama   OllamaConfig   `mapstructure:"ollama"`
+}
+
+type OllamaConfig struct {
+	Model string `mapstructure:"model"`
+	Host  string `mapstructure:"host"`
 }
 
 type PomodoroConfig struct {
@@ -46,6 +52,10 @@ func Default() *Config {
 		},
 		Task: TaskConfig{
 			DefaultPriority: 10,
+		},
+		Ollama: OllamaConfig{
+			Model: "smollm2:135m",
+			Host:  "http://localhost:11434",
 		},
 	}
 }
@@ -94,6 +104,8 @@ func (c *Config) Save() error {
 	v.Set("data.logfile", c.Data.Logfile)
 	v.Set("data.markdowndir", c.Data.MarkdownDir)
 	v.Set("task.default_priority", c.Task.DefaultPriority)
+	v.Set("ollama.model", c.Ollama.Model)
+	v.Set("ollama.host", c.Ollama.Host)
 
 	return v.SafeWriteConfigAs(filepath.Join(qaiDir, "config.toml"))
 }
