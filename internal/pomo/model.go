@@ -47,6 +47,9 @@ type Model struct {
 	CompletedSessions int
 
 	AutoStartTaskID int
+
+	SearchMode  bool
+	SearchQuery string
 }
 
 func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorage) Model {
@@ -178,7 +181,21 @@ func (m *Model) getSortedTodos() []model.Task {
 func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	todos := m.getSortedTodos()
 
+	if m.SearchMode {
+		return m.handleSearchInput(msg, todos)
+	}
+
 	switch msg.String() {
+	case "/":
+		m.SearchMode = true
+		m.SearchQuery = ""
+		return m, nil
+	case "n":
+		m.jumpToMatch(todos, m.SelectedIdx+1, 1)
+		return m, nil
+	case "N":
+		m.jumpToMatch(todos, m.SelectedIdx-1, -1)
+		return m, nil
 	case "ctrl+p", "up", "k":
 		if m.SelectedIdx > 0 {
 			m.SelectedIdx--
@@ -246,6 +263,52 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 	return m, nil
+}
+
+func (m *Model) handleSearchInput(msg tea.KeyMsg, todos []model.Task) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		m.SearchMode = false
+		m.jumpToMatch(todos, m.SelectedIdx, 1)
+		return m, nil
+	case tea.KeyEsc, tea.KeyCtrlC:
+		m.SearchMode = false
+		m.SearchQuery = ""
+		return m, nil
+	case tea.KeyBackspace:
+		if len(m.SearchQuery) > 0 {
+			q := []rune(m.SearchQuery)
+			m.SearchQuery = string(q[:len(q)-1])
+		}
+		return m, nil
+	case tea.KeyRunes, tea.KeySpace:
+		m.SearchQuery += string(msg.Runes)
+		m.jumpToMatch(todos, 0, 1)
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m *Model) jumpToMatch(todos []model.Task, start, step int) {
+	if m.SearchQuery == "" || len(todos) == 0 {
+		return
+	}
+	q := strings.ToLower(m.SearchQuery)
+	n := len(todos)
+	for i := 0; i < n; i++ {
+		idx := ((start+step*i)%n + n) % n
+		if strings.Contains(strings.ToLower(todos[idx].Title), q) {
+			m.SelectedIdx = idx
+			return
+		}
+	}
+}
+
+func (m *Model) matchesSearch(title string) bool {
+	if m.SearchQuery == "" {
+		return false
+	}
+	return strings.Contains(strings.ToLower(title), strings.ToLower(m.SearchQuery))
 }
 
 func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -423,6 +486,7 @@ var (
 	subtleStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	selectedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
 	checkboxStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	matchStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("226")).Bold(true)
 )
 
 func (m *Model) View() string {
@@ -448,16 +512,47 @@ func (m *Model) viewSelectTask() string {
 	todos := m.getSortedTodos()
 	for i, t := range todos {
 		prefix := "  "
+		title := t.Title
+		if m.matchesSearch(title) {
+			title = highlightMatch(title, m.SearchQuery)
+		}
+		line := fmt.Sprintf("%s[%d] (P%d) [%s] %s", prefix, t.ID, t.Priority, t.Status, title)
 		if i == m.SelectedIdx {
 			prefix = "> "
-			s += selectedStyle.Render(fmt.Sprintf("%s[%d] (P%d) [%s] %s", prefix, t.ID, t.Priority, t.Status, t.Title)) + "\n"
-		} else {
-			s += fmt.Sprintf("%s[%d] (P%d) [%s] %s\n", prefix, t.ID, t.Priority, t.Status, t.Title)
+			line = selectedStyle.Render(fmt.Sprintf("%s[%d] (P%d) [%s] ", prefix, t.ID, t.Priority, t.Status)) + title
 		}
+		s += line + "\n"
 	}
 
-	s += "\n" + subtleStyle.Render(i18n.T("pomo.select_task_hint"))
+	s += "\n"
+	if m.SearchMode {
+		s += fmt.Sprintf("/%s\n", m.SearchQuery)
+	} else if m.SearchQuery != "" {
+		s += subtleStyle.Render(i18n.T("pomo.search_active", m.SearchQuery)) + "\n"
+	}
+	s += subtleStyle.Render(i18n.T("pomo.select_task_hint"))
 	return s
+}
+
+func highlightMatch(title, query string) string {
+	if query == "" {
+		return title
+	}
+	lowerTitle := strings.ToLower(title)
+	lowerQuery := strings.ToLower(query)
+	var b strings.Builder
+	i := 0
+	for i < len(title) {
+		idx := strings.Index(lowerTitle[i:], lowerQuery)
+		if idx < 0 {
+			b.WriteString(title[i:])
+			break
+		}
+		b.WriteString(title[i : i+idx])
+		b.WriteString(matchStyle.Render(title[i+idx : i+idx+len(query)]))
+		i += idx + len(query)
+	}
+	return b.String()
 }
 
 func (m *Model) viewFocus() string {
