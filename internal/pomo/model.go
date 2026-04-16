@@ -178,23 +178,44 @@ func (m *Model) getSortedTodos() []model.Task {
 	return todos
 }
 
-func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m *Model) getVisibleTodos() []model.Task {
 	todos := m.getSortedTodos()
-
-	if m.SearchMode {
-		return m.handleSearchInput(msg, todos)
+	if m.SearchQuery == "" {
+		return todos
 	}
+	q := strings.ToLower(m.SearchQuery)
+	filtered := todos[:0:0]
+	for _, t := range todos {
+		if strings.Contains(strings.ToLower(t.Title), q) {
+			filtered = append(filtered, t)
+		}
+	}
+	return filtered
+}
+
+func (m *Model) clampSelectedIdx(n int) {
+	if n == 0 {
+		m.SelectedIdx = 0
+		return
+	}
+	if m.SelectedIdx >= n {
+		m.SelectedIdx = n - 1
+	}
+	if m.SelectedIdx < 0 {
+		m.SelectedIdx = 0
+	}
+}
+
+func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.SearchMode {
+		return m.handleSearchInput(msg)
+	}
+
+	todos := m.getVisibleTodos()
 
 	switch msg.String() {
 	case "/":
 		m.SearchMode = true
-		m.SearchQuery = ""
-		return m, nil
-	case "n":
-		m.jumpToMatch(todos, m.SelectedIdx+1, 1)
-		return m, nil
-	case "N":
-		m.jumpToMatch(todos, m.SelectedIdx-1, -1)
 		return m, nil
 	case "ctrl+p", "up", "k":
 		if m.SelectedIdx > 0 {
@@ -220,13 +241,14 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
 
 			// Re-sort and find new index to keep cursor on the same task
-			newTodos := m.getSortedTodos()
+			newTodos := m.getVisibleTodos()
 			for i, t := range newTodos {
 				if t.ID == task.ID {
 					m.SelectedIdx = i
 					break
 				}
 			}
+			m.clampSelectedIdx(len(newTodos))
 		}
 	case "enter":
 		if len(todos) > 0 {
@@ -265,43 +287,30 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleSearchInput(msg tea.KeyMsg, todos []model.Task) (tea.Model, tea.Cmd) {
+func (m *Model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEnter:
 		m.SearchMode = false
-		m.jumpToMatch(todos, m.SelectedIdx, 1)
+		m.clampSelectedIdx(len(m.getVisibleTodos()))
 		return m, nil
 	case tea.KeyEsc, tea.KeyCtrlC:
 		m.SearchMode = false
 		m.SearchQuery = ""
+		m.SelectedIdx = 0
 		return m, nil
 	case tea.KeyBackspace:
 		if len(m.SearchQuery) > 0 {
 			q := []rune(m.SearchQuery)
 			m.SearchQuery = string(q[:len(q)-1])
 		}
+		m.SelectedIdx = 0
 		return m, nil
 	case tea.KeyRunes, tea.KeySpace:
 		m.SearchQuery += string(msg.Runes)
-		m.jumpToMatch(todos, 0, 1)
+		m.SelectedIdx = 0
 		return m, nil
 	}
 	return m, nil
-}
-
-func (m *Model) jumpToMatch(todos []model.Task, start, step int) {
-	if m.SearchQuery == "" || len(todos) == 0 {
-		return
-	}
-	q := strings.ToLower(m.SearchQuery)
-	n := len(todos)
-	for i := 0; i < n; i++ {
-		idx := ((start+step*i)%n + n) % n
-		if strings.Contains(strings.ToLower(todos[idx].Title), q) {
-			m.SelectedIdx = idx
-			return
-		}
-	}
 }
 
 func (m *Model) matchesSearch(title string) bool {
@@ -509,7 +518,10 @@ func (m *Model) viewSelectTask() string {
 	var s string
 	s += titleStyle.Render(i18n.T("pomo.select_task")) + "\n\n"
 
-	todos := m.getSortedTodos()
+	todos := m.getVisibleTodos()
+	if len(todos) == 0 && m.SearchQuery != "" {
+		s += subtleStyle.Render(i18n.T("pomo.search_no_match")) + "\n"
+	}
 	for i, t := range todos {
 		prefix := "  "
 		title := t.Title
