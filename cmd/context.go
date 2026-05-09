@@ -10,6 +10,7 @@ import (
 	"github.com/f6o/qai/internal/config"
 	"github.com/f6o/qai/internal/flock"
 	"github.com/f6o/qai/internal/pomo"
+	"github.com/f6o/qai/internal/pomo/alert"
 	"github.com/f6o/qai/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -52,6 +53,10 @@ func (ctx *AppContext) RunPomodoro(cmd *cobra.Command, taskID int) error {
 	m := pomo.NewModel(ctx.Config, ctx.TaskStore, ctx.LogStore)
 	if taskID > 0 {
 		m.AutoStartTaskID = taskID
+	}
+	if ctx.Config.Pomodoro.Notify {
+		runner := alert.StartDefault()
+		defer runner.Stop()
 	}
 	p := tea.NewProgram(&m, tea.WithInput(cmd.InOrStdin()), tea.WithOutput(cmd.OutOrStdout()))
 
