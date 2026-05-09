@@ -50,7 +50,11 @@ type Model struct {
 
 	SearchMode  bool
 	SearchQuery string
+
+	ActionPromptedAt time.Time
 }
+
+const actionReminderDelay = 3 * time.Minute
 
 func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorage) Model {
 	return Model{
@@ -72,6 +76,7 @@ func NewModel(cfg *config.Config, ts *storage.TaskStorage, ls *storage.LogStorag
 
 		SessionType:       "work",
 		CompletedSessions: 0,
+		ActionPromptedAt:  time.Time{},
 	}
 }
 
@@ -87,6 +92,55 @@ func (m *Model) Init() tea.Cmd {
 }
 
 type TickMsg time.Time
+
+type ActionReminderMsg struct {
+	State      State
+	PromptedAt time.Time
+}
+
+func (m *Model) clearActionPrompt() {
+	m.ActionPromptedAt = time.Time{}
+}
+
+func (m *Model) enterActionPromptState(state State) tea.Cmd {
+	m.CurrentState = state
+	m.ActionPromptedAt = time.Now()
+	if !m.Config.Pomodoro.Notify {
+		return nil
+	}
+	return m.scheduleActionReminder(state, m.ActionPromptedAt)
+}
+
+func (m *Model) scheduleActionReminder(state State, promptedAt time.Time) tea.Cmd {
+	return tea.Tick(actionReminderDelay, func(time.Time) tea.Msg {
+		return ActionReminderMsg{
+			State:      state,
+			PromptedAt: promptedAt,
+		}
+	})
+}
+
+func (m *Model) handleActionReminder(msg ActionReminderMsg) (tea.Model, tea.Cmd) {
+	if !m.Config.Pomodoro.Notify ||
+		m.CurrentState != msg.State ||
+		!m.ActionPromptedAt.Equal(msg.PromptedAt) {
+		return m, nil
+	}
+
+	beeep.Alert("qai", m.actionReminderText(msg.State), "")
+	return m, m.scheduleActionReminder(msg.State, msg.PromptedAt)
+}
+
+func (m *Model) actionReminderText(state State) string {
+	switch state {
+	case StateBreakChoice:
+		return i18n.T("pomo.notify_break_choice_reminder")
+	case StateBreakDone:
+		return i18n.T("pomo.notify_break_done_reminder")
+	default:
+		return i18n.T("pomo.notify_work_complete")
+	}
+}
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -108,6 +162,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKey(msg)
 	case TickMsg:
 		return m.handleTick(msg)
+	case ActionReminderMsg:
+		return m.handleActionReminder(msg)
 	}
 	return m, nil
 }
@@ -154,6 +210,7 @@ func (m *Model) autoStartTask() (tea.Model, tea.Cmd) {
 			}
 
 			m.CurrentState = StateFocus
+			m.clearActionPrompt()
 			m.SessionType = "work"
 			m.StartTime = time.Now()
 			m.CompletedAt = time.Time{}
@@ -273,6 +330,7 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 
 			m.CurrentState = StateFocus
+			m.clearActionPrompt()
 			m.SessionType = "work"
 			m.StartTime = time.Now()
 			m.CompletedAt = time.Time{}
@@ -343,7 +401,7 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				EventType: model.EventFocusSkip,
 			})
 		}
-		m.CurrentState = StateBreakChoice
+		return m, m.enterActionPromptState(StateBreakChoice)
 	case "q", "ctrl+c", "esc":
 		if m.FocusedTask != nil {
 			elapsed := int(time.Since(m.StartTime).Minutes())
@@ -354,7 +412,7 @@ func (m *Model) handleFocus(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			})
 		}
 		m.CompletedAt = time.Now()
-		m.CurrentState = StateBreakChoice
+		return m, m.enterActionPromptState(StateBreakChoice)
 	}
 	return m, nil
 }
@@ -363,6 +421,7 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "b":
 		m.CurrentState = StateBreak
+		m.clearActionPrompt()
 		m.SessionType = "break"
 		m.StartTime = time.Now()
 		m.CompletedAt = time.Time{}
@@ -382,10 +441,11 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.saveMarkdown()
 		}
 		m.CurrentState = StateSelectTask
+		m.clearActionPrompt()
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
 	case "s":
-		m.CurrentState = StateBreakDone
+		return m, m.enterActionPromptState(StateBreakDone)
 	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
@@ -395,7 +455,7 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) handleBreak(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "s":
-		m.CurrentState = StateBreakDone
+		return m, m.enterActionPromptState(StateBreakDone)
 	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
 	}
@@ -406,6 +466,7 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "c":
 		m.CurrentState = StateFocus
+		m.clearActionPrompt()
 		m.SessionType = "work"
 		m.StartTime = time.Now()
 		m.CompletedAt = time.Time{}
@@ -431,10 +492,12 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.saveMarkdown()
 		}
 		m.CurrentState = StateSelectTask
+		m.clearActionPrompt()
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
 	case "n":
 		m.CurrentState = StateSelectTask
+		m.clearActionPrompt()
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
 	case "q", "ctrl+c", "esc":
@@ -469,12 +532,12 @@ func (m *Model) handleTick(_ TickMsg) (tea.Model, tea.Cmd) {
 			if m.Config.Pomodoro.Notify {
 				beeep.Alert("qai", i18n.T("pomo.notify_work_complete"), "")
 			}
-			m.CurrentState = StateBreakChoice
+			return m, m.enterActionPromptState(StateBreakChoice)
 		case StateBreak:
 			if m.Config.Pomodoro.Notify {
 				beeep.Alert("qai", i18n.T("pomo.notify_break_complete"), "")
 			}
-			m.CurrentState = StateBreakDone
+			return m, m.enterActionPromptState(StateBreakDone)
 		}
 		return m, nil
 	}
