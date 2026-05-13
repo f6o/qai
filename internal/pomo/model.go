@@ -24,6 +24,7 @@ const (
 	StateBreakChoice
 	StateBreak
 	StateBreakDone
+	StateNewTaskInput
 )
 
 type Model struct {
@@ -50,6 +51,8 @@ type Model struct {
 
 	SearchMode  bool
 	SearchQuery string
+
+	NewTaskTitle string
 }
 
 const (
@@ -152,17 +155,17 @@ func (m *Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleBreak(msg)
 	case StateBreakDone:
 		return m.handleBreakDone(msg)
+	case StateNewTaskInput:
+		return m.handleNewTaskInput(msg)
 	}
 	return m, nil
 }
 
-func (m *Model) autoStartTask() (tea.Model, tea.Cmd) {
-	taskID := m.AutoStartTaskID
-	m.AutoStartTaskID = 0
-
+func (m *Model) startTask(taskID int) (tea.Model, tea.Cmd) {
 	for i := range m.Tasks {
 		if m.Tasks[i].ID == taskID {
 			task := m.Tasks[i]
+			fromStatus := task.Status
 			task.Status = model.StatusDoing
 			task.StartedAt = time.Now()
 			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
@@ -170,7 +173,7 @@ func (m *Model) autoStartTask() (tea.Model, tea.Cmd) {
 			m.LogStore.AppendNew(model.Log{
 				TodoID:     task.ID,
 				EventType:  model.EventStatusChange,
-				FromStatus: model.StatusTodo,
+				FromStatus: fromStatus,
 				ToStatus:   model.StatusDoing,
 			})
 
@@ -196,6 +199,12 @@ func (m *Model) autoStartTask() (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *Model) autoStartTask() (tea.Model, tea.Cmd) {
+	taskID := m.AutoStartTaskID
+	m.AutoStartTaskID = 0
+	return m.startTask(taskID)
 }
 
 func (m *Model) getSortedTodos() []model.Task {
@@ -284,39 +293,90 @@ func (m *Model) handleSelectTask(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		if len(todos) > 0 {
 			task := todos[m.SelectedIdx]
-			task.Status = model.StatusDoing
-			task.StartedAt = time.Now()
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, task)
-
-			m.LogStore.AppendNew(model.Log{
-				TodoID:     task.ID,
-				EventType:  model.EventStatusChange,
-				FromStatus: model.StatusTodo,
-				ToStatus:   model.StatusDoing,
-			})
-
-			// Find the task in updated m.Tasks to set FocusedTask
-			for i := range m.Tasks {
-				if m.Tasks[i].ID == task.ID {
-					m.FocusedTask = &m.Tasks[i]
-					break
-				}
-			}
-
-			m.CurrentState = StateFocus
-			m.SessionType = "work"
-			m.StartTime = time.Now()
-			m.CompletedAt = time.Time{}
-			m.TimeLeft = time.Duration(m.Config.Pomodoro.WorkMinutes) * time.Minute
-			m.IsPaused = false
-			m.saveMarkdown()
-			return m, tea.Batch(
-				m.cancelActionReminder(),
-				tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) }),
-			)
+			return m.startTask(task.ID)
 		}
 	case "q", "ctrl+c", "esc":
 		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m *Model) completeFocusedTask() {
+	if m.FocusedTask == nil {
+		return
+	}
+	fromStatus := m.FocusedTask.Status
+	m.FocusedTask.Status = model.StatusDone
+	m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
+	m.LogStore.AppendNew(model.Log{
+		TodoID:     m.FocusedTask.ID,
+		EventType:  model.EventStatusChange,
+		FromStatus: fromStatus,
+		ToStatus:   model.StatusDone,
+	})
+	m.saveMarkdown()
+}
+
+func (m *Model) enterNewTaskInput() tea.Cmd {
+	m.completeFocusedTask()
+	m.CurrentState = StateNewTaskInput
+	m.NewTaskTitle = ""
+	m.FocusedTask = nil
+	m.CompletedAt = time.Time{}
+	return m.cancelActionReminder()
+}
+
+func (m *Model) addAndStartNewTask() (tea.Model, tea.Cmd) {
+	title := strings.TrimSpace(m.NewTaskTitle)
+	if title == "" {
+		return m, nil
+	}
+
+	task := model.Task{
+		Title:     title,
+		Status:    model.StatusTodo,
+		Priority:  m.Config.Task.DefaultPriority,
+		ParentID:  nil,
+		CreatedAt: time.Now(),
+	}
+
+	var err error
+	m.Tasks, err = m.TaskStore.Add(m.Tasks, task)
+	if err != nil {
+		return m, nil
+	}
+
+	task = m.Tasks[len(m.Tasks)-1]
+	m.LogStore.AppendNew(model.Log{
+		TodoID:    task.ID,
+		Content:   task.Title,
+		EventType: model.EventTaskCreate,
+	})
+	m.NewTaskTitle = ""
+	return m.startTask(task.ID)
+}
+
+func (m *Model) handleNewTaskInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		return m.addAndStartNewTask()
+	case tea.KeyEsc, tea.KeyCtrlC:
+		m.CurrentState = StateSelectTask
+		m.NewTaskTitle = ""
+		m.SelectedIdx = 0
+		return m, nil
+	case tea.KeyBackspace:
+		if len(m.NewTaskTitle) > 0 {
+			title := []rune(m.NewTaskTitle)
+			m.NewTaskTitle = string(title[:len(title)-1])
+		}
+		return m, nil
+	case tea.KeyRunes:
+		m.NewTaskTitle += string(msg.Runes)
+		return m, nil
+	case tea.KeySpace:
+		m.NewTaskTitle += " "
+		return m, nil
 	}
 	return m, nil
 }
@@ -339,8 +399,12 @@ func (m *Model) handleSearchInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.SelectedIdx = 0
 		return m, nil
-	case tea.KeyRunes, tea.KeySpace:
+	case tea.KeyRunes:
 		m.SearchQuery += string(msg.Runes)
+		m.SelectedIdx = 0
+		return m, nil
+	case tea.KeySpace:
+		m.SearchQuery += " "
 		m.SelectedIdx = 0
 		return m, nil
 	}
@@ -407,21 +471,13 @@ func (m *Model) handleBreakChoice(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) }),
 		)
 	case "d":
-		if m.FocusedTask != nil {
-			m.FocusedTask.Status = model.StatusDone
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
-			m.LogStore.AppendNew(model.Log{
-				TodoID:     m.FocusedTask.ID,
-				EventType:  model.EventStatusChange,
-				FromStatus: model.StatusDoing,
-				ToStatus:   model.StatusDone,
-			})
-			m.saveMarkdown()
-		}
+		m.completeFocusedTask()
 		m.CurrentState = StateSelectTask
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
 		return m, m.cancelActionReminder()
+	case "a":
+		return m, m.enterNewTaskInput()
 	case "s":
 		return m, m.enterActionPromptState(StateBreakDone)
 	case "q", "ctrl+c", "esc":
@@ -460,21 +516,13 @@ func (m *Model) handleBreakDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			tea.Tick(time.Second, func(t time.Time) tea.Msg { return TickMsg(t) }),
 		)
 	case "d":
-		if m.FocusedTask != nil {
-			m.FocusedTask.Status = model.StatusDone
-			m.Tasks, _ = m.TaskStore.Update(m.Tasks, *m.FocusedTask)
-			m.LogStore.AppendNew(model.Log{
-				TodoID:     m.FocusedTask.ID,
-				EventType:  model.EventStatusChange,
-				FromStatus: model.StatusDoing,
-				ToStatus:   model.StatusDone,
-			})
-			m.saveMarkdown()
-		}
+		m.completeFocusedTask()
 		m.CurrentState = StateSelectTask
 		m.SelectedIdx = 0
 		m.FocusedTask = nil
 		return m, m.cancelActionReminder()
+	case "a":
+		return m, m.enterNewTaskInput()
 	case "n":
 		m.CurrentState = StateSelectTask
 		m.SelectedIdx = 0
@@ -559,6 +607,8 @@ func (m *Model) View() string {
 		return m.viewBreak()
 	case StateBreakDone:
 		return m.viewBreakDone()
+	case StateNewTaskInput:
+		return m.viewNewTaskInput()
 	}
 	return ""
 }
@@ -707,6 +757,14 @@ func (m *Model) viewBreakDone() string {
 	}
 
 	s += i18n.T("pomo.break_done_options")
+	return s
+}
+
+func (m *Model) viewNewTaskInput() string {
+	var s string
+	s += titleStyle.Render(i18n.T("pomo.new_task_title")) + "\n\n"
+	s += fmt.Sprintf("> %s\n\n", m.NewTaskTitle)
+	s += subtleStyle.Render(i18n.T("pomo.new_task_hint"))
 	return s
 }
 
