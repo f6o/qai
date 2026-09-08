@@ -5,8 +5,11 @@ import (
 	"sort"
 
 	"github.com/f6o/qai/i18n"
+	"github.com/f6o/qai/internal/model"
 	"github.com/spf13/cobra"
 )
+
+var listMinPriority int
 
 var listCmd = &cobra.Command{
 	Use:   "list",
@@ -24,6 +27,11 @@ var listCmd = &cobra.Command{
 
 		ideas := ctx.TaskStore.FilterIdeas(tasks)
 		todos := ctx.TaskStore.FilterTodos(tasks)
+
+		if listMinPriority > 0 {
+			ideas = filterByMinPriority(ideas, listMinPriority)
+			todos = filterByMinPriority(todos, listMinPriority)
+		}
 
 		sort.Slice(todos, func(i, j int) bool {
 			return todos[i].Priority > todos[j].Priority
@@ -52,6 +60,17 @@ var listCmd = &cobra.Command{
 	},
 }
 
+func filterByMinPriority(tasks []model.Task, minPriority int) []model.Task {
+	var result []model.Task
+	for _, t := range tasks {
+		if t.Priority >= minPriority {
+			result = append(result, t)
+		}
+	}
+	return result
+}
+
 func init() {
 	rootCmd.AddCommand(listCmd)
+	listCmd.Flags().IntVarP(&listMinPriority, "above", "A", 0, i18n.T("cmd.list.flag.above"))
 }
