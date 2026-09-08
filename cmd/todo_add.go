@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,9 +15,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var todoAddJSON bool
+
 var todoAddCmd = &cobra.Command{
-	Use:   "add [content]",
-	Short: i18n.T("cmd.todo_add.short"),
+	Use:          "add [content]",
+	Short:        i18n.T("cmd.todo_add.short"),
+	SilenceUsage: true,
+	Long: `Add a new todo non-interactively. Content is a required single argument.
+Side effects: --start launches a Pomodoro session (writes locks under ~/.config/qai).
+--interactive reads prompts from stdin and is not usable in scripts (and refuses --json).
+Use --json to get exactly one machine-readable line of the task record.
+Keys parent_id/started_at are omitted when unset.`,
+	Example: `  qai todo add "write tests"
+  qai todo add --json "write tests" | jq -r .id
+  ID=$(qai idea add --json "new feature" | jq -r .id)
+  qai todo add --json "step 1" --parent "$ID"`,
 	Args: func(cmd *cobra.Command, args []string) error {
 		interactive, err := cmd.Flags().GetBool("interactive")
 		if err != nil {
@@ -27,17 +41,20 @@ var todoAddCmd = &cobra.Command{
 		return cobra.ExactArgs(1)(cmd, args)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		interactive, err := cmd.Flags().GetBool("interactive")
+		if err != nil {
+			return err
+		}
+		if todoAddJSON && interactive {
+			return errors.New(i18n.T("cmd.todo_add.err_json_interactive"))
+		}
+
 		ctx, err := NewAppContext()
 		if err != nil {
 			return err
 		}
 
 		tasks, err := ctx.TaskStore.Load()
-		if err != nil {
-			return err
-		}
-
-		interactive, err := cmd.Flags().GetBool("interactive")
 		if err != nil {
 			return err
 		}
@@ -86,7 +103,13 @@ var todoAddCmd = &cobra.Command{
 			Content:   task.Title,
 			EventType: model.EventTaskCreate,
 		})
-		cmd.Println(i18n.T("cmd.todo_add.success", task.Title, task.ID))
+		if todoAddJSON {
+			if err := json.NewEncoder(cmd.OutOrStdout()).Encode(task); err != nil {
+				return err
+			}
+		} else {
+			cmd.Println(i18n.T("cmd.todo_add.success", task.Title, task.ID))
+		}
 
 		if startPomo {
 			return ctx.RunPomodoro(cmd, task.ID)
@@ -100,6 +123,7 @@ func init() {
 	todoAddCmd.Flags().IntP("parent", "p", 0, "Parent idea ID")
 	todoAddCmd.Flags().BoolP("start", "s", false, i18n.T("cmd.todo_add.flag_start"))
 	todoAddCmd.Flags().BoolP("interactive", "i", false, i18n.T("cmd.todo_add.flag_interactive"))
+	todoAddCmd.Flags().BoolVar(&todoAddJSON, "json", false, i18n.T("cmd.todo_add.flag_json"))
 	todoCmd.AddCommand(todoAddCmd)
 }
 

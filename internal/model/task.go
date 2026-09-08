@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -21,6 +22,22 @@ type Task struct {
 	ParentID  *int      `yaml:"parent_id,omitempty" json:"parent_id,omitempty"`
 	StartedAt time.Time `yaml:"started_at,omitempty" json:"started_at,omitempty"`
 	CreatedAt time.Time `yaml:"created_at" json:"created_at"`
+}
+
+// MarshalJSON omits started_at when it is the zero value, matching the
+// yaml/storage representation (key absent when unset).
+func (t Task) MarshalJSON() ([]byte, error) {
+	type alias Task
+	aux := struct {
+		StartedAt *time.Time `json:"started_at,omitempty"`
+		alias
+	}{
+		alias: alias(t),
+	}
+	if !t.StartedAt.IsZero() {
+		aux.StartedAt = &t.StartedAt
+	}
+	return json.Marshal(aux)
 }
 
 type EventType string
