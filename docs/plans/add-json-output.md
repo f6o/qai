@@ -17,7 +17,7 @@ AI コーディングツール(opencode / Claude Code 等)が `todo add` / `idea
 {"id":25,"title":"hoge","status":"todo","priority":10,"created_at":"2026-09-08T21:16:39.6+09:00"}
 ```
 
-- 注意: `parent_id` / `started_at` は `omitempty` で、未設定時はキー自体が存在しない。エージェント向けには `Example` 内でこの事実を明記する
+- 注意: `parent_id` は `*int` の `omitempty` で未設定時キー自体が存在しない。`started_at` は `time.Time` のため encoding/json の `omitempty` が利かず、`model.Task.MarshalJSON`(aux struct で `*time.Time` として shadow し、zero 値時に省略)で対応した
 - 失敗時は exit 1 + stderr(cobra 既定。stdout には何も出さない)
 - `-i` との併用は **エラー終了**(プロンプトが stdout を汚染するため。stderr に理由メッセージ)
 - `--start` との併用は可。JSON 1 行を先に出力してから pomo を開始する
@@ -82,3 +82,12 @@ cmd.todo_add.err_json_interactive = --json cannot be combined with --interactive
 5. `qai todo add -i --json "x"` → exit 1、stdout 出力なし
 6. 検証で追加したタスクは tasks.yaml の末尾から手動削除する(delete コマンドが存在しないため)。データ本体の書式を壊さないこと
 </content>
+
+## 結果(実装済み・レビュー合格・作業ツリー)
+
+実装中に計画の前提と異なる2点が発覚し、承認のうえスコープを拡大して修正した:
+
+1. **失敗時契約**: 「cobra 既定で exit 1 + stdout 空」は誤りだった(`main.go` が `cmd.Execute()` のエラーを無視して全コマンドが exit 0、usage が stdout に出ていた)。→ `main.go` で `os.Exit(1)` 伝播 + add コマンド2つのみ `SilenceUsage: true`(`SilenceErrors` は未設定。`Error:` は cobra が stderr へ)
+2. **started_at 漏れ**: 上記のとおり `MarshalJSON` を `internal/model/task.go` に追加
+
+結果、変更は5ファイル(cmd/todo_add.go / cmd/idea_add.go / i18n ini / internal/model/task.go / main.go)となった。`--quality-delta` の `todoAddCmd` verbosity(82→101)は cobra インライン RunE の house style に伴う既知のトレードオフとして ack 相当。検証6項目は実装側・レビュー側で独立に再実行済み。

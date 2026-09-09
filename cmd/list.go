@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -10,10 +11,16 @@ import (
 )
 
 var listMinPriority int
+var listJSON bool
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: i18n.T("cmd.list.short"),
+	Use:          "list",
+	Short:        i18n.T("cmd.list.short"),
+	SilenceUsage: true,
+	Long: `List all tasks (ideas and todos).
+Use --json to get exactly one machine-readable line: {"ideas":[...],"todos":[...]}.`,
+	Example: `  qai list
+  qai list --json | jq -r '.todos[].id'`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := NewAppContext()
 		if err != nil {
@@ -36,6 +43,19 @@ var listCmd = &cobra.Command{
 		sort.Slice(todos, func(i, j int) bool {
 			return todos[i].Priority > todos[j].Priority
 		})
+
+		if listJSON {
+			if ideas == nil {
+				ideas = []model.Task{}
+			}
+			if todos == nil {
+				todos = []model.Task{}
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(struct {
+				Ideas []model.Task `json:"ideas"`
+				Todos []model.Task `json:"todos"`
+			}{ideas, todos})
+		}
 
 		if len(ideas) > 0 {
 			cmd.Println(i18n.T("cmd.idea_list.header"))
@@ -73,4 +93,5 @@ func filterByMinPriority(tasks []model.Task, minPriority int) []model.Task {
 func init() {
 	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().IntVarP(&listMinPriority, "above", "A", 0, i18n.T("cmd.list.flag.above"))
+	listCmd.Flags().BoolVar(&listJSON, "json", false, i18n.T("cmd.list.flag_json"))
 }
