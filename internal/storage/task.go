@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -73,6 +74,18 @@ func (s *TaskStorage) Update(tasks []model.Task, task model.Task) ([]model.Task,
 	}
 	tasks[idx] = task
 	return tasks, s.Save(tasks)
+}
+
+func (s *TaskStorage) Remove(tasks []model.Task, id int) ([]model.Task, *model.Task, error) {
+	idx := slices.IndexFunc(tasks, func(t model.Task) bool { return t.ID == id })
+	if idx == -1 {
+		return tasks, nil, fmt.Errorf("task %d not found", id)
+	}
+	removed := tasks[idx]
+	result := make([]model.Task, 0, len(tasks)-1)
+	result = append(result, tasks[:idx]...)
+	result = append(result, tasks[idx+1:]...)
+	return result, &removed, nil
 }
 
 func (s *TaskStorage) FindByID(tasks []model.Task, id int) *model.Task {
